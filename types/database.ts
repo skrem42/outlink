@@ -36,6 +36,9 @@ export interface Domain {
   registered_date: string;
   expiry_date: string | null;
   registrar: string | null;
+  purchase_source?: string;
+  namecheap_order_id?: string | null;
+  auto_renew?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -279,6 +282,9 @@ export interface CreateDomainRequest {
   registered_date?: string;
   expiry_date?: string;
   registrar?: string;
+  purchase_source?: string;
+  namecheap_order_id?: string;
+  auto_renew?: boolean;
 }
 
 export interface UpdateDomainRequest {

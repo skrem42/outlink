@@ -76,11 +76,51 @@ export function ImageUploader({
     }
   };
 
-  const handleCropComplete = (croppedImage: string) => {
-    setPreview(croppedImage);
-    onChange(croppedImage);
+  const handleCropComplete = async (croppedImage: string) => {
+    // Compress the image to reduce payload size
+    let compressedImage = await compressImage(croppedImage, 1000, 0.85);
+    
+    // If still too large (>400KB base64), compress more aggressively
+    if (compressedImage.length > 400000) {
+      compressedImage = await compressImage(croppedImage, 800, 0.75);
+    }
+    
+    // If STILL too large, go even more aggressive
+    if (compressedImage.length > 400000) {
+      compressedImage = await compressImage(croppedImage, 600, 0.65);
+    }
+    
+    setPreview(compressedImage);
+    onChange(compressedImage);
     setShowCropper(false);
     setSelectedImage(null);
+  };
+
+  const compressImage = async (dataUrl: string, maxWidth = 1000, quality = 0.85): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let { width, height } = img;
+
+        // Resize if too large
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+
+        // Convert to JPEG with compression
+        const compressed = canvas.toDataURL('image/jpeg', quality);
+        resolve(compressed);
+      };
+      img.src = dataUrl;
+    });
   };
 
   const handleCropCancel = () => {
