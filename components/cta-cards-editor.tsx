@@ -9,9 +9,15 @@ import { Select, SelectItem } from "@heroui/select";
 import { Tabs, Tab } from "@heroui/tabs";
 import { Icon } from "@iconify/react";
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@heroui/modal";
+import { Accordion, AccordionItem } from "@heroui/accordion";
+import { Tooltip } from "@heroui/tooltip";
+import { Chip } from "@heroui/chip";
+import { Switch } from "@heroui/switch";
 import { ColorGradientPicker } from "./color-gradient-picker";
 import { ImageUploader } from "./image-uploader";
-import type { CTACard, CTACardStyle } from "@/types/database";
+import { VideoUploader } from "./video-uploader";
+import { getCVRIncrease } from "@/lib/utils";
+import type { CTACard, CTACardStyle, CTRMechanisms } from "@/types/database";
 
 interface CTACardsEditorProps {
   value: CTACard[];
@@ -97,6 +103,40 @@ export function CTACardsEditor({ value, onChange }: CTACardsEditorProps) {
     });
   };
 
+  const updateEditingCardCTRMechanisms = (updates: Partial<CTRMechanisms>) => {
+    if (!editingCard) return;
+    setEditingCard({
+      ...editingCard,
+      ctr_mechanisms: { ...editingCard.ctr_mechanisms, ...updates },
+    });
+  };
+
+  // Handle mutual exclusivity for blocking mechanisms
+  const enableBlockingMechanism = (mechanismName: 'click_to_reveal' | 'countdown_timer' | 'blur_preview' | 'progress_bar', defaultConfig: any) => {
+    if (!editingCard) return;
+    
+    // Disable all other blocking mechanisms
+    const newMechanisms: Partial<CTRMechanisms> = {
+      ...editingCard.ctr_mechanisms,
+      click_to_reveal: mechanismName === 'click_to_reveal' ? { enabled: true, ...defaultConfig } : { ...editingCard.ctr_mechanisms?.click_to_reveal, enabled: false },
+      countdown_timer: mechanismName === 'countdown_timer' ? { enabled: true, ...defaultConfig } : { ...editingCard.ctr_mechanisms?.countdown_timer, enabled: false },
+      blur_preview: mechanismName === 'blur_preview' ? { enabled: true, ...defaultConfig } : { ...editingCard.ctr_mechanisms?.blur_preview, enabled: false },
+      progress_bar: mechanismName === 'progress_bar' ? { enabled: true, ...defaultConfig } : { ...editingCard.ctr_mechanisms?.progress_bar, enabled: false },
+    };
+    
+    setEditingCard({
+      ...editingCard,
+      ctr_mechanisms: newMechanisms,
+    });
+  };
+
+  const disableBlockingMechanism = (mechanismName: 'click_to_reveal' | 'countdown_timer' | 'blur_preview' | 'progress_bar') => {
+    if (!editingCard) return;
+    updateEditingCardCTRMechanisms({
+      [mechanismName]: { ...editingCard.ctr_mechanisms?.[mechanismName], enabled: false },
+    });
+  };
+
   const getCardPreviewStyle = (card: CTACard) => {
     const { style } = card;
     switch (style.type) {
@@ -116,6 +156,8 @@ export function CTACardsEditor({ value, onChange }: CTACardsEditorProps) {
           backgroundSize: "cover",
           backgroundPosition: "center",
         };
+      case "video":
+        return { background: "#000" };
       default:
         return {};
     }
@@ -400,7 +442,7 @@ export function CTACardsEditor({ value, onChange }: CTACardsEditorProps) {
                         onSelectionChange={(key) => {
                           const type = key === "none" 
                             ? (editingCard.style.logo_name ? "logo" : "text")
-                            : key as "solid" | "gradient" | "image";
+                            : key as "solid" | "gradient" | "image" | "video";
                           updateEditingCardStyle({ type });
                         }}
                         fullWidth
@@ -409,6 +451,7 @@ export function CTACardsEditor({ value, onChange }: CTACardsEditorProps) {
                         <Tab key="solid" title="Solid Color" />
                         <Tab key="gradient" title="Gradient" />
                         <Tab key="image" title="Image" />
+                        <Tab key="video" title="Video" />
                       </Tabs>
 
                       {/* Solid Color */}
@@ -469,7 +512,725 @@ export function CTACardsEditor({ value, onChange }: CTACardsEditorProps) {
                           aspectRatio="wide"
                         />
                       )}
+
+                      {/* Video Background */}
+                      {editingCard.style.type === "video" && (
+                        <VideoUploader
+                          label="Background Video"
+                          value={editingCard.style.background_video}
+                          onChange={(url) =>
+                            updateEditingCardStyle({
+                              background_video: url,
+                            })
+                          }
+                        />
+                      )}
                     </div>
+
+                    {/* CTR Boost Settings */}
+                    <Card>
+                      <CardHeader>
+                        <div className="flex items-center gap-2">
+                          <Icon icon="solar:chart-2-bold-duotone" width={20} />
+                          <span className="font-semibold">CTR Boost Settings</span>
+                          <Chip size="sm" color="success" variant="flat">
+                            Increase Conversions
+                          </Chip>
+                        </div>
+                      </CardHeader>
+                      <CardBody className="space-y-2">
+                        <p className="text-sm text-default-500 mb-3">
+                          Add psychological triggers to increase click-through rates
+                        </p>
+                        
+                        {/* Section: Blocking Mechanisms */}
+                        <div className="mb-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Chip 
+                              size="sm" 
+                              color="warning" 
+                              variant="flat"
+                              startContent={<Icon icon="solar:shield-bold" width={12} />}
+                            >
+                              Blocking Mechanisms
+                            </Chip>
+                            <p className="text-xs text-default-500">Only one can be active at a time</p>
+                          </div>
+                        </div>
+                        
+                        <Accordion variant="splitted">
+                          {/* Click to Reveal */}
+                          <AccordionItem
+                            key="click-reveal"
+                            title={
+                              <div className="flex items-center gap-2">
+                                <span>Click to Reveal</span>
+                                <Tooltip content="Users must click multiple times to unlock the link. Increases engagement.">
+                                  <Chip size="sm" color="success" variant="flat">
+                                    {getCVRIncrease('click_to_reveal')}
+                                  </Chip>
+                                </Tooltip>
+                              </div>
+                            }
+                          >
+                            <div className="space-y-3 pt-2">
+                              <Switch
+                                isSelected={editingCard.ctr_mechanisms?.click_to_reveal?.enabled || false}
+                                onValueChange={(checked) => {
+                                  if (checked) {
+                                    enableBlockingMechanism('click_to_reveal', {
+                                      clicks_required: editingCard.ctr_mechanisms?.click_to_reveal?.clicks_required || 5,
+                                      button_text: editingCard.ctr_mechanisms?.click_to_reveal?.button_text || "Tap to reveal link",
+                                    });
+                                  } else {
+                                    disableBlockingMechanism('click_to_reveal');
+                                  }
+                                }}
+                              >
+                                Enable Click to Reveal
+                              </Switch>
+                              {editingCard.ctr_mechanisms?.click_to_reveal?.enabled && (
+                                <>
+                                  <Input
+                                    type="number"
+                                    label="Clicks Required"
+                                    value={String(editingCard.ctr_mechanisms.click_to_reveal.clicks_required)}
+                                    onChange={(e) =>
+                                      updateEditingCardCTRMechanisms({
+                                        click_to_reveal: {
+                                          ...editingCard.ctr_mechanisms!.click_to_reveal!,
+                                          clicks_required: parseInt(e.target.value) || 5,
+                                        },
+                                      })
+                                    }
+                                    min={1}
+                                    max={10}
+                                  />
+                                  <Input
+                                    label="Button Text"
+                                    value={editingCard.ctr_mechanisms.click_to_reveal.button_text}
+                                    onChange={(e) =>
+                                      updateEditingCardCTRMechanisms({
+                                        click_to_reveal: {
+                                          ...editingCard.ctr_mechanisms!.click_to_reveal!,
+                                          button_text: e.target.value,
+                                        },
+                                      })
+                                    }
+                                  />
+                                </>
+                              )}
+                            </div>
+                          </AccordionItem>
+
+                          {/* Countdown Timer */}
+                          <AccordionItem
+                            key="countdown"
+                            title={
+                              <div className="flex items-center gap-2">
+                                <span>Countdown Before Reveal</span>
+                                <Tooltip content="Adds anticipation with a countdown timer before revealing the link.">
+                                  <Chip size="sm" color="success" variant="flat">
+                                    {getCVRIncrease('countdown_timer')}
+                                  </Chip>
+                                </Tooltip>
+                              </div>
+                            }
+                          >
+                            <div className="space-y-3 pt-2">
+                              <Switch
+                                isSelected={editingCard.ctr_mechanisms?.countdown_timer?.enabled || false}
+                                onValueChange={(checked) => {
+                                  if (checked) {
+                                    enableBlockingMechanism('countdown_timer', {
+                                      duration_seconds: editingCard.ctr_mechanisms?.countdown_timer?.duration_seconds || 5,
+                                      message: editingCard.ctr_mechanisms?.countdown_timer?.message || "Link unlocking in...",
+                                    });
+                                  } else {
+                                    disableBlockingMechanism('countdown_timer');
+                                  }
+                                }}
+                              >
+                                Enable Countdown Timer
+                              </Switch>
+                              {editingCard.ctr_mechanisms?.countdown_timer?.enabled && (
+                                <>
+                                  <Input
+                                    type="number"
+                                    label="Duration (seconds)"
+                                    value={String(editingCard.ctr_mechanisms.countdown_timer.duration_seconds)}
+                                    onChange={(e) =>
+                                      updateEditingCardCTRMechanisms({
+                                        countdown_timer: {
+                                          ...editingCard.ctr_mechanisms!.countdown_timer!,
+                                          duration_seconds: parseInt(e.target.value) || 5,
+                                        },
+                                      })
+                                    }
+                                    min={1}
+                                    max={30}
+                                  />
+                                  <Input
+                                    label="Message"
+                                    value={editingCard.ctr_mechanisms.countdown_timer.message}
+                                    onChange={(e) =>
+                                      updateEditingCardCTRMechanisms({
+                                        countdown_timer: {
+                                          ...editingCard.ctr_mechanisms!.countdown_timer!,
+                                          message: e.target.value,
+                                        },
+                                      })
+                                    }
+                                  />
+                                </>
+                              )}
+                            </div>
+                          </AccordionItem>
+
+                        </Accordion>
+
+                        {/* Section: Non-Blocking Enhancements */}
+                        <div className="my-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Chip 
+                              size="sm" 
+                              color="primary" 
+                              variant="flat"
+                              startContent={<Icon icon="solar:star-bold" width={12} />}
+                            >
+                              Scarcity & Social Proof
+                            </Chip>
+                            <p className="text-xs text-default-500">Can be combined with any mechanism</p>
+                          </div>
+                        </div>
+
+                        <Accordion variant="splitted">
+                          {/* Limited Slots */}
+                          <AccordionItem
+                            key="limited-slots"
+                            title={
+                              <div className="flex items-center gap-2">
+                                <span>Limited Slots</span>
+                                <Tooltip content="Display 'Only X spots left!' to create scarcity.">
+                                  <Chip size="sm" color="success" variant="flat">
+                                    {getCVRIncrease('limited_slots')}
+                                  </Chip>
+                                </Tooltip>
+                              </div>
+                            }
+                          >
+                            <div className="space-y-3 pt-2">
+                              <Switch
+                                isSelected={editingCard.ctr_mechanisms?.limited_slots?.enabled || false}
+                                onValueChange={(checked) =>
+                                  updateEditingCardCTRMechanisms({
+                                    limited_slots: {
+                                      enabled: checked,
+                                      current: editingCard.ctr_mechanisms?.limited_slots?.current || 3,
+                                      total: editingCard.ctr_mechanisms?.limited_slots?.total || 10,
+                                      message: editingCard.ctr_mechanisms?.limited_slots?.message || "Only {current} spots left!",
+                                    },
+                                  })
+                                }
+                              >
+                                Enable Limited Slots
+                              </Switch>
+                              {editingCard.ctr_mechanisms?.limited_slots?.enabled && (
+                                <>
+                                  <Input
+                                    type="number"
+                                    label="Spots Remaining"
+                                    value={String(editingCard.ctr_mechanisms.limited_slots.current)}
+                                    onChange={(e) =>
+                                      updateEditingCardCTRMechanisms({
+                                        limited_slots: {
+                                          ...editingCard.ctr_mechanisms!.limited_slots!,
+                                          current: parseInt(e.target.value) || 3,
+                                        },
+                                      })
+                                    }
+                                    min={1}
+                                  />
+                                  <Input
+                                    type="number"
+                                    label="Total Spots"
+                                    value={String(editingCard.ctr_mechanisms.limited_slots.total)}
+                                    onChange={(e) =>
+                                      updateEditingCardCTRMechanisms({
+                                        limited_slots: {
+                                          ...editingCard.ctr_mechanisms!.limited_slots!,
+                                          total: parseInt(e.target.value) || 10,
+                                        },
+                                      })
+                                    }
+                                    min={1}
+                                  />
+                                  <Input
+                                    label="Custom Message"
+                                    value={editingCard.ctr_mechanisms.limited_slots.message}
+                                    onChange={(e) =>
+                                      updateEditingCardCTRMechanisms({
+                                        limited_slots: {
+                                          ...editingCard.ctr_mechanisms!.limited_slots!,
+                                          message: e.target.value,
+                                        },
+                                      })
+                                    }
+                                    placeholder="Use {current} and {total} for dynamic values"
+                                    description="Example: Only {current}/{total} spots left!"
+                                  />
+                                </>
+                              )}
+                            </div>
+                          </AccordionItem>
+
+                          {/* Live Viewers */}
+                          <AccordionItem
+                            key="live-viewers"
+                            title={
+                              <div className="flex items-center gap-2">
+                                <span>Live Viewers Count</span>
+                                <Tooltip content="Show how many people are viewing now to create social proof.">
+                                  <Chip size="sm" color="success" variant="flat">
+                                    {getCVRIncrease('live_viewers')}
+                                  </Chip>
+                                </Tooltip>
+                              </div>
+                            }
+                          >
+                            <div className="space-y-3 pt-2">
+                              <Switch
+                                isSelected={editingCard.ctr_mechanisms?.live_viewers?.enabled || false}
+                                onValueChange={(checked) =>
+                                  updateEditingCardCTRMechanisms({
+                                    live_viewers: {
+                                      enabled: checked,
+                                      count: editingCard.ctr_mechanisms?.live_viewers?.count || 127,
+                                    },
+                                  })
+                                }
+                              >
+                                Enable Live Viewers
+                              </Switch>
+                              {editingCard.ctr_mechanisms?.live_viewers?.enabled && (
+                                <Input
+                                  type="number"
+                                  label="Viewer Count"
+                                  value={String(editingCard.ctr_mechanisms.live_viewers.count)}
+                                  onChange={(e) =>
+                                    updateEditingCardCTRMechanisms({
+                                      live_viewers: {
+                                        ...editingCard.ctr_mechanisms!.live_viewers!,
+                                        count: parseInt(e.target.value) || 127,
+                                      },
+                                    })
+                                  }
+                                  min={1}
+                                />
+                              )}
+                            </div>
+                          </AccordionItem>
+
+                          {/* Exclusive Badge */}
+                          <AccordionItem
+                            key="exclusive"
+                            title={
+                              <div className="flex items-center gap-2">
+                                <span>Exclusive Access Badge</span>
+                                <Tooltip content="Add VIP/exclusive badge to increase perceived value.">
+                                  <Chip size="sm" color="success" variant="flat">
+                                    {getCVRIncrease('exclusive_badge')}
+                                  </Chip>
+                                </Tooltip>
+                              </div>
+                            }
+                          >
+                            <div className="space-y-3 pt-2">
+                              <Switch
+                                isSelected={editingCard.ctr_mechanisms?.exclusive_badge?.enabled || false}
+                                onValueChange={(checked) =>
+                                  updateEditingCardCTRMechanisms({
+                                    exclusive_badge: {
+                                      enabled: checked,
+                                      text: editingCard.ctr_mechanisms?.exclusive_badge?.text || "VIP Access",
+                                    },
+                                  })
+                                }
+                              >
+                                Enable Exclusive Badge
+                              </Switch>
+                              {editingCard.ctr_mechanisms?.exclusive_badge?.enabled && (
+                                <Input
+                                  label="Badge Text"
+                                  value={editingCard.ctr_mechanisms.exclusive_badge.text}
+                                  onChange={(e) =>
+                                    updateEditingCardCTRMechanisms({
+                                      exclusive_badge: {
+                                        ...editingCard.ctr_mechanisms!.exclusive_badge!,
+                                        text: e.target.value,
+                                      },
+                                    })
+                                  }
+                                  placeholder="VIP Access, Members Only, etc."
+                                />
+                              )}
+                            </div>
+                          </AccordionItem>
+
+                          {/* Access Code */}
+                          <AccordionItem
+                            key="access-code"
+                            title={
+                              <div className="flex items-center gap-2">
+                                <span>Access Code Protection</span>
+                                <Tooltip content="Require a password/code to unlock the link.">
+                                  <Chip size="sm" color="success" variant="flat">
+                                    {getCVRIncrease('access_code')}
+                                  </Chip>
+                                </Tooltip>
+                              </div>
+                            }
+                          >
+                            <div className="space-y-3 pt-2">
+                              <Switch
+                                isSelected={editingCard.ctr_mechanisms?.access_code?.enabled || false}
+                                onValueChange={(checked) =>
+                                  updateEditingCardCTRMechanisms({
+                                    access_code: {
+                                      enabled: checked,
+                                      code: editingCard.ctr_mechanisms?.access_code?.code || "",
+                                      hint: editingCard.ctr_mechanisms?.access_code?.hint || "",
+                                    },
+                                  })
+                                }
+                              >
+                                Enable Access Code
+                              </Switch>
+                              {editingCard.ctr_mechanisms?.access_code?.enabled && (
+                                <>
+                                  <Input
+                                    label="Access Code"
+                                    value={editingCard.ctr_mechanisms.access_code.code}
+                                    onChange={(e) =>
+                                      updateEditingCardCTRMechanisms({
+                                        access_code: {
+                                          ...editingCard.ctr_mechanisms!.access_code!,
+                                          code: e.target.value,
+                                        },
+                                      })
+                                    }
+                                    placeholder="secret123"
+                                  />
+                                  <Input
+                                    label="Hint (Optional)"
+                                    value={editingCard.ctr_mechanisms.access_code.hint || ""}
+                                    onChange={(e) =>
+                                      updateEditingCardCTRMechanisms({
+                                        access_code: {
+                                          ...editingCard.ctr_mechanisms!.access_code!,
+                                          hint: e.target.value,
+                                        },
+                                      })
+                                    }
+                                    placeholder="Check your email"
+                                  />
+                                </>
+                              )}
+                            </div>
+                          </AccordionItem>
+
+                          {/* Blur Preview */}
+                          <AccordionItem
+                            key="blur-preview"
+                            title={
+                              <div className="flex items-center gap-2">
+                                <span>Blur Preview</span>
+                                <Tooltip content="Show blurred content with teaser text to create curiosity.">
+                                  <Chip size="sm" color="success" variant="flat">
+                                    {getCVRIncrease('blur_preview')}
+                                  </Chip>
+                                </Tooltip>
+                              </div>
+                            }
+                          >
+                            <div className="space-y-3 pt-2">
+                              <Switch
+                                isSelected={editingCard.ctr_mechanisms?.blur_preview?.enabled || false}
+                                onValueChange={(checked) => {
+                                  if (checked) {
+                                    enableBlockingMechanism('blur_preview', {
+                                      blur_amount: editingCard.ctr_mechanisms?.blur_preview?.blur_amount || 5,
+                                      teaser_text: editingCard.ctr_mechanisms?.blur_preview?.teaser_text || "Click to see exclusive content",
+                                    });
+                                  } else {
+                                    disableBlockingMechanism('blur_preview');
+                                  }
+                                }}
+                              >
+                                Enable Blur Preview
+                              </Switch>
+                              {editingCard.ctr_mechanisms?.blur_preview?.enabled && (
+                                <>
+                                  <Input
+                                    type="number"
+                                    label="Blur Amount (1-10)"
+                                    value={String(editingCard.ctr_mechanisms.blur_preview.blur_amount)}
+                                    onChange={(e) =>
+                                      updateEditingCardCTRMechanisms({
+                                        blur_preview: {
+                                          ...editingCard.ctr_mechanisms!.blur_preview!,
+                                          blur_amount: parseInt(e.target.value) || 5,
+                                        },
+                                      })
+                                    }
+                                    min={1}
+                                    max={10}
+                                  />
+                                  <Input
+                                    label="Teaser Text"
+                                    value={editingCard.ctr_mechanisms.blur_preview.teaser_text}
+                                    onChange={(e) =>
+                                      updateEditingCardCTRMechanisms({
+                                        blur_preview: {
+                                          ...editingCard.ctr_mechanisms!.blur_preview!,
+                                          teaser_text: e.target.value,
+                                        },
+                                      })
+                                    }
+                                  />
+                                </>
+                              )}
+                            </div>
+                          </AccordionItem>
+
+                          {/* Progress Bar */}
+                          <AccordionItem
+                            key="progress-bar"
+                            title={
+                              <div className="flex items-center gap-2">
+                                <span>Progress Bar Reveal</span>
+                                <Tooltip content="Show loading bar that reveals link after completion.">
+                                  <Chip size="sm" color="success" variant="flat">
+                                    {getCVRIncrease('progress_bar')}
+                                  </Chip>
+                                </Tooltip>
+                              </div>
+                            }
+                          >
+                            <div className="space-y-3 pt-2">
+                              <Switch
+                                isSelected={editingCard.ctr_mechanisms?.progress_bar?.enabled || false}
+                                onValueChange={(checked) => {
+                                  if (checked) {
+                                    enableBlockingMechanism('progress_bar', {
+                                      duration_seconds: editingCard.ctr_mechanisms?.progress_bar?.duration_seconds || 3,
+                                      message: editingCard.ctr_mechanisms?.progress_bar?.message || "Loading your exclusive content...",
+                                    });
+                                  } else {
+                                    disableBlockingMechanism('progress_bar');
+                                  }
+                                }}
+                              >
+                                Enable Progress Bar
+                              </Switch>
+                              {editingCard.ctr_mechanisms?.progress_bar?.enabled && (
+                                <>
+                                  <Input
+                                    type="number"
+                                    label="Duration (seconds)"
+                                    value={String(editingCard.ctr_mechanisms.progress_bar.duration_seconds)}
+                                    onChange={(e) =>
+                                      updateEditingCardCTRMechanisms({
+                                        progress_bar: {
+                                          ...editingCard.ctr_mechanisms!.progress_bar!,
+                                          duration_seconds: parseInt(e.target.value) || 3,
+                                        },
+                                      })
+                                    }
+                                    min={1}
+                                    max={30}
+                                  />
+                                  <Input
+                                    label="Message"
+                                    value={editingCard.ctr_mechanisms.progress_bar.message}
+                                    onChange={(e) =>
+                                      updateEditingCardCTRMechanisms({
+                                        progress_bar: {
+                                          ...editingCard.ctr_mechanisms!.progress_bar!,
+                                          message: e.target.value,
+                                        },
+                                      })
+                                    }
+                                  />
+                                </>
+                              )}
+                            </div>
+                          </AccordionItem>
+
+                        </Accordion>
+
+                        {/* Section: Advanced Options */}
+                        <div className="my-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Chip 
+                              size="sm" 
+                              color="secondary" 
+                              variant="flat"
+                              startContent={<Icon icon="solar:settings-bold" width={12} />}
+                            >
+                              Advanced Options
+                            </Chip>
+                          </div>
+                        </div>
+
+                        <Accordion variant="splitted">
+                          {/* Access Code */}
+                          <AccordionItem
+                            key="access-code"
+                            title={
+                              <div className="flex items-center gap-2">
+                                <span>Access Code Protection</span>
+                                <Tooltip content="Require a password/code to unlock the link.">
+                                  <Chip size="sm" color="success" variant="flat">
+                                    {getCVRIncrease('access_code')}
+                                  </Chip>
+                                </Tooltip>
+                              </div>
+                            }
+                          >
+                            <div className="space-y-3 pt-2">
+                              <Switch
+                                isSelected={editingCard.ctr_mechanisms?.access_code?.enabled || false}
+                                onValueChange={(checked) =>
+                                  updateEditingCardCTRMechanisms({
+                                    access_code: {
+                                      enabled: checked,
+                                      code: editingCard.ctr_mechanisms?.access_code?.code || "",
+                                      hint: editingCard.ctr_mechanisms?.access_code?.hint || "",
+                                    },
+                                  })
+                                }
+                              >
+                                Enable Access Code
+                              </Switch>
+                              {editingCard.ctr_mechanisms?.access_code?.enabled && (
+                                <>
+                                  <Input
+                                    label="Access Code"
+                                    value={editingCard.ctr_mechanisms.access_code.code}
+                                    onChange={(e) =>
+                                      updateEditingCardCTRMechanisms({
+                                        access_code: {
+                                          ...editingCard.ctr_mechanisms!.access_code!,
+                                          code: e.target.value,
+                                        },
+                                      })
+                                    }
+                                    placeholder="secret123"
+                                  />
+                                  <Input
+                                    label="Hint (Optional)"
+                                    value={editingCard.ctr_mechanisms.access_code.hint || ""}
+                                    onChange={(e) =>
+                                      updateEditingCardCTRMechanisms({
+                                        access_code: {
+                                          ...editingCard.ctr_mechanisms!.access_code!,
+                                          hint: e.target.value,
+                                        },
+                                      })
+                                    }
+                                    placeholder="Check your email"
+                                  />
+                                </>
+                              )}
+                            </div>
+                          </AccordionItem>
+
+                          {/* Visual Effects */}
+                          <AccordionItem
+                            key="visual-effects"
+                            title={
+                              <div className="flex items-center gap-2">
+                                <span>Visual Effects</span>
+                                <Tooltip content="Add animations and effects to attract attention.">
+                                  <Chip size="sm" color="success" variant="flat">
+                                    {getCVRIncrease('confetti')}
+                                  </Chip>
+                                </Tooltip>
+                              </div>
+                            }
+                          >
+                            <div className="space-y-3 pt-2">
+                              <Switch
+                                isSelected={editingCard.ctr_mechanisms?.visual_effects?.pulse_animation || false}
+                                onValueChange={(checked) =>
+                                  updateEditingCardCTRMechanisms({
+                                    visual_effects: {
+                                      ...editingCard.ctr_mechanisms?.visual_effects,
+                                      pulse_animation: checked,
+                                      glow_effect: editingCard.ctr_mechanisms?.visual_effects?.glow_effect || false,
+                                      confetti_on_reveal: editingCard.ctr_mechanisms?.visual_effects?.confetti_on_reveal || false,
+                                    },
+                                  })
+                                }
+                              >
+                                Pulse Animation
+                              </Switch>
+                              <Switch
+                                isSelected={editingCard.ctr_mechanisms?.visual_effects?.glow_effect || false}
+                                onValueChange={(checked) =>
+                                  updateEditingCardCTRMechanisms({
+                                    visual_effects: {
+                                      ...editingCard.ctr_mechanisms?.visual_effects,
+                                      pulse_animation: editingCard.ctr_mechanisms?.visual_effects?.pulse_animation || false,
+                                      glow_effect: checked,
+                                      confetti_on_reveal: editingCard.ctr_mechanisms?.visual_effects?.confetti_on_reveal || false,
+                                    },
+                                  })
+                                }
+                              >
+                                Glow Effect
+                              </Switch>
+                              <Switch
+                                isSelected={editingCard.ctr_mechanisms?.visual_effects?.confetti_on_reveal || false}
+                                onValueChange={(checked) =>
+                                  updateEditingCardCTRMechanisms({
+                                    visual_effects: {
+                                      ...editingCard.ctr_mechanisms?.visual_effects,
+                                      pulse_animation: editingCard.ctr_mechanisms?.visual_effects?.pulse_animation || false,
+                                      glow_effect: editingCard.ctr_mechanisms?.visual_effects?.glow_effect || false,
+                                      confetti_on_reveal: checked,
+                                    },
+                                  })
+                                }
+                              >
+                                Confetti on Reveal
+                              </Switch>
+                            </div>
+                          </AccordionItem>
+                        </Accordion>
+
+                        {/* 18+ Requirement */}
+                        <div className="pt-4 border-t border-default-200">
+                          <Switch
+                            isSelected={editingCard.require_18plus || false}
+                            onValueChange={(checked) =>
+                              updateEditingCard({ require_18plus: checked })
+                            }
+                          >
+                            <div className="flex items-center gap-2">
+                              <span>Require 18+ Confirmation</span>
+                              <Chip size="sm" color="warning" variant="flat">
+                                Adult Content
+                              </Chip>
+                            </div>
+                          </Switch>
+                          <p className="text-xs text-default-500 mt-1 ml-10">
+                            Shows two-step age confirmation for adult platforms (OnlyFans, Fansly, etc.)
+                          </p>
+                        </div>
+                      </CardBody>
+                    </Card>
 
                     {/* Preview */}
                     <div>
@@ -481,6 +1242,16 @@ export function CTACardsEditor({ value, onChange }: CTACardsEditorProps) {
                         style={getCardPreviewStyle(editingCard)}
                       >
                         <CardBody className="p-6 min-h-[140px] flex flex-col justify-center relative">
+                          {/* Video Background */}
+                          {editingCard.style.type === "video" && editingCard.style.background_video && (
+                            <video
+                              src={editingCard.style.background_video}
+                              autoPlay
+                              loop
+                              muted
+                              className="absolute inset-0 w-full h-full object-cover opacity-60"
+                            />
+                          )}
                           <div className="text-center relative z-10">
                             {/* Logo - works with all backgrounds now */}
                             {editingCard.style.logo_icon && (
@@ -491,7 +1262,7 @@ export function CTACardsEditor({ value, onChange }: CTACardsEditorProps) {
                                   style={{
                                     color:
                                       editingCard.style.logo_color || "#fff",
-                                    filter: editingCard.style.type === "image"
+                                    filter: editingCard.style.type === "image" || editingCard.style.type === "video"
                                       ? "drop-shadow(0 2px 4px rgba(0,0,0,0.3))"
                                       : "none",
                                   }}
@@ -502,7 +1273,7 @@ export function CTACardsEditor({ value, onChange }: CTACardsEditorProps) {
                                     style={{
                                       color:
                                         editingCard.style.logo_color || "#fff",
-                                      textShadow: editingCard.style.type === "image"
+                                      textShadow: editingCard.style.type === "image" || editingCard.style.type === "video"
                                         ? "0 2px 4px rgba(0,0,0,0.3)"
                                         : "none",
                                     }}
@@ -523,12 +1294,13 @@ export function CTACardsEditor({ value, onChange }: CTACardsEditorProps) {
                               className={`text-lg font-semibold ${
                                 editingCard.style.type === "image" ||
                                 editingCard.style.type === "gradient" ||
-                                editingCard.style.type === "solid"
+                                editingCard.style.type === "solid" ||
+                                editingCard.style.type === "video"
                                   ? "text-white"
                                   : "text-foreground"
                               }`}
                               style={{
-                                textShadow: editingCard.style.type === "image"
+                                textShadow: editingCard.style.type === "image" || editingCard.style.type === "video"
                                   ? "0 2px 8px rgba(0,0,0,0.5)"
                                   : "none",
                               }}
@@ -540,12 +1312,13 @@ export function CTACardsEditor({ value, onChange }: CTACardsEditorProps) {
                                 className={`text-sm mt-1 ${
                                   editingCard.style.type === "image" ||
                                   editingCard.style.type === "gradient" ||
-                                  editingCard.style.type === "solid"
+                                  editingCard.style.type === "solid" ||
+                                  editingCard.style.type === "video"
                                     ? "text-white/90"
                                     : "text-default-500"
                                 }`}
                                 style={{
-                                  textShadow: editingCard.style.type === "image"
+                                  textShadow: editingCard.style.type === "image" || editingCard.style.type === "video"
                                     ? "0 1px 4px rgba(0,0,0,0.5)"
                                     : "none",
                                 }}
@@ -557,9 +1330,11 @@ export function CTACardsEditor({ value, onChange }: CTACardsEditorProps) {
                         </CardBody>
                       </Card>
                       
-                      {editingCard.style.type === "image" && (
+                      {(editingCard.style.type === "image" || editingCard.style.type === "video") && (
                         <p className="text-xs text-default-500 mt-2 text-center">
-                          Dark gradient overlay applied for text readability
+                          {editingCard.style.type === "image" 
+                            ? "Dark gradient overlay applied for text readability"
+                            : "Video plays automatically with reduced opacity"}
                         </p>
                       )}
                     </div>

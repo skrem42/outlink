@@ -80,7 +80,7 @@ export interface SocialLink {
 }
 
 export interface CTACardStyle {
-  type: 'text' | 'logo' | 'image' | 'solid' | 'gradient';
+  type: 'text' | 'logo' | 'image' | 'solid' | 'gradient' | 'video';
   logo_name?: string; // e.g., 'OnlyFans', 'Instagram'
   logo_icon?: string; // iconify icon
   logo_color?: string; // brand color for logo
@@ -88,6 +88,71 @@ export interface CTACardStyle {
   background_image?: string;
   background_color?: string;
   background_gradient?: { start: string; end: string };
+  background_video?: string; // video URL for video backgrounds
+}
+
+export interface CTRMechanisms {
+  // Click-to-reveal gamification
+  click_to_reveal?: {
+    enabled: boolean;
+    clicks_required: number; // e.g., 5
+    button_text: string; // e.g., "Tap to reveal"
+  };
+  
+  // Countdown timer before reveal
+  countdown_timer?: {
+    enabled: boolean;
+    duration_seconds: number; // e.g., 5
+    message: string; // e.g., "Link unlocking in..."
+  };
+  
+  // Limited slots scarcity
+  limited_slots?: {
+    enabled: boolean;
+    current: number; // Fake configurable number
+    total: number;
+    message: string; // e.g., "Only X spots left!"
+  };
+  
+  // Live viewers count
+  live_viewers?: {
+    enabled: boolean;
+    count: number; // Fake configurable number
+  };
+  
+  // Exclusive access badge
+  exclusive_badge?: {
+    enabled: boolean;
+    text: string; // e.g., "VIP Access", "Members Only"
+  };
+  
+  // Password/code entry
+  access_code?: {
+    enabled: boolean;
+    code: string;
+    hint?: string;
+  };
+  
+  // Curiosity gap with blur
+  blur_preview?: {
+    enabled: boolean;
+    blur_amount: number; // 1-10
+    teaser_text: string;
+  };
+  
+  // Visual effects
+  visual_effects?: {
+    pulse_animation: boolean;
+    glow_effect: boolean;
+    confetti_on_reveal: boolean;
+  };
+  
+  // Progress bar before reveal
+  progress_bar?: {
+    enabled: boolean;
+    duration_seconds: number;
+    message: string;
+  };
 }
 
 export interface CTACard {
@@ -97,6 +162,8 @@ export interface CTACard {
   url: string;
   order: number;
   style: CTACardStyle;
+  ctr_mechanisms?: CTRMechanisms;
+  require_18plus?: boolean; // for adult platforms
 }
 
 export interface BackgroundGradient {

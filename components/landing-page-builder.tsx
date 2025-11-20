@@ -529,7 +529,7 @@ export function LandingPageBuilder({
             </CardHeader>
             <CardBody className="p-0">
               <div className="aspect-[9/16] max-h-[calc(100vh-250px)] overflow-y-auto border-4 border-default-200 rounded-lg bg-background">
-                <LandingPageViewer link={link} settings={previewSettings} />
+                <LandingPageViewer link={link} settings={previewSettings} isPreview={true} />
               </div>
             </CardBody>
           </Card>

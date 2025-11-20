@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Avatar } from "@heroui/avatar";
 import { Card, CardBody } from "@heroui/card";
 import { Button } from "@heroui/button";
@@ -8,19 +8,27 @@ import { Chip } from "@heroui/chip";
 import { Icon } from "@iconify/react";
 import { motion } from "framer-motion";
 import { ModernAudioPlayer } from "./modern-audio-player";
+import { CTACardWithMechanisms } from "./ctr-mechanisms/cta-card-with-mechanisms";
+import { AgeConfirmationModal } from "./ctr-mechanisms/age-confirmation-modal";
+import { isAdultPlatform } from "@/lib/utils";
 import type { Link, LandingPageSettings } from "@/types/database";
 
 interface LandingPageViewerProps {
   link: Link;
   settings: LandingPageSettings;
   onButtonClick?: () => void;
+  isPreview?: boolean; // When true, disables analytics and navigation
 }
 
 export function LandingPageViewer({
   link,
   settings,
   onButtonClick,
+  isPreview = false,
 }: LandingPageViewerProps) {
+  const [ageConfirmedCards, setAgeConfirmedCards] = useState<Set<string>>(new Set());
+  const [pendingAgeCard, setPendingAgeCard] = useState<string | null>(null);
+  
   const isLightMode = settings.theme_mode === 'light';
   
   // Theme-aware colors
@@ -56,6 +64,12 @@ export function LandingPageViewer({
     if (onButtonClick) {
       onButtonClick();
     }
+    
+    // Skip analytics and navigation in preview mode
+    if (isPreview) {
+      return;
+    }
+    
     // Track analytics
     fetch("/api/analytics/track", {
       method: "POST",
@@ -73,17 +87,33 @@ export function LandingPageViewer({
   const isFullMode = settings.profile_display_mode === 'full';
 
   return (
-    <div 
-      className="min-h-screen flex flex-col" 
-      style={{ backgroundColor: themeColors.background }}
-    >
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
+      {/* Blurred background for desktop - only shows on larger screens */}
+      {settings.avatar_url && (
+        <div 
+          className="hidden md:block absolute inset-0 z-0"
+          style={{
+            backgroundImage: `url(${settings.avatar_url})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            filter: 'blur(80px) brightness(0.4)',
+            transform: 'scale(1.1)',
+          }}
+        />
+      )}
+      
+      {/* Mobile-sized container */}
+      <div 
+        className="relative z-10 w-full md:max-w-md md:h-[812px] md:shadow-2xl md:rounded-2xl overflow-hidden flex flex-col" 
+        style={{ backgroundColor: themeColors.background }}
+      >
       {/* Full Display Mode - Hero Image */}
       {isFullMode ? (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6 }}
-          className="relative w-full h-[400px] sm:h-[500px]"
+          className="relative w-full h-[350px] md:h-[400px]"
         >
           {settings.avatar_url ? (
             <>
@@ -341,12 +371,25 @@ export function LandingPageViewer({
                           backgroundSize: "cover",
                           backgroundPosition: "center",
                         };
+                      case "video":
+                        return { background: "#000" };
                       default:
                         return {};
                     }
                   };
 
                   const handleCardClick = () => {
+                    // Skip everything in preview mode
+                    if (isPreview) {
+                      return;
+                    }
+                    
+                    // Check if 18+ confirmation is required
+                    if (card.require_18plus && isAdultPlatform(card.url) && !ageConfirmedCards.has(card.id)) {
+                      setPendingAgeCard(card.id);
+                      return;
+                    }
+
                     // Track analytics
                     fetch("/api/analytics/track", {
                       method: "POST",
@@ -361,94 +404,124 @@ export function LandingPageViewer({
                     window.location.href = card.url;
                   };
 
+                  const renderCardContent = () => (
+                    <Card
+                      isPressable
+                      onPress={handleCardClick}
+                      className="w-full hover:scale-[1.02] transition-transform shadow-lg overflow-hidden relative"
+                      style={getCardStyle()}
+                    >
+                      <CardBody className="p-6 min-h-[120px] flex items-center justify-center relative">
+                        {/* Video Background */}
+                        {card.style.type === "video" && card.style.background_video && (
+                          <video
+                            src={card.style.background_video}
+                            autoPlay
+                            loop
+                            muted
+                            playsInline
+                            className="absolute inset-0 w-full h-full object-cover opacity-60"
+                          />
+                        )}
+                        <div className="text-center w-full relative z-10">
+                          {/* Logo Style - Now works with all background types */}
+                          {card.style.logo_icon && (
+                            <div className="mb-2">
+                              <Icon
+                                icon={card.style.logo_icon}
+                                width={36}
+                                style={{
+                                  color: card.style.logo_color || "#fff",
+                                  filter: card.style.type === "image" || card.style.type === "video"
+                                    ? "drop-shadow(0 2px 4px rgba(0,0,0,0.3))"
+                                    : "none",
+                                }}
+                                className="mx-auto"
+                              />
+                              {card.style.logo_name && (
+                                <p
+                                  className="font-bold text-lg mt-1"
+                                  style={{
+                                    color: card.style.logo_color || "#fff",
+                                    textShadow: card.style.type === "image" || card.style.type === "video"
+                                      ? "0 2px 4px rgba(0,0,0,0.3)"
+                                      : "none",
+                                  }}
+                                >
+                                  {card.style.prefix_text && (
+                                    <span className="mr-1">
+                                      {card.style.prefix_text}
+                                    </span>
+                                  )}
+                                  {card.style.logo_name}
+                                </p>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Title and Description */}
+                          <h3
+                            className={`text-lg font-semibold ${
+                              card.style.type === "image" ||
+                              card.style.type === "gradient" ||
+                              card.style.type === "solid" ||
+                              card.style.type === "video"
+                                ? "text-white"
+                                : "text-foreground"
+                            }`}
+                            style={{
+                              textShadow: card.style.type === "image" || card.style.type === "video"
+                                ? "0 2px 8px rgba(0,0,0,0.5)"
+                                : "none",
+                            }}
+                          >
+                            {card.title}
+                          </h3>
+                          {card.description && (
+                            <p
+                              className={`text-sm mt-1 ${
+                                card.style.type === "image" ||
+                                card.style.type === "gradient" ||
+                                card.style.type === "solid" ||
+                                card.style.type === "video"
+                                  ? "text-white/90"
+                                  : "text-default-500"
+                              }`}
+                              style={{
+                                textShadow: card.style.type === "image" || card.style.type === "video"
+                                  ? "0 1px 4px rgba(0,0,0,0.5)"
+                                  : "none",
+                              }}
+                            >
+                              {card.description}
+                            </p>
+                          )}
+                        </div>
+                      </CardBody>
+                    </Card>
+                  );
+
                   return (
                     <motion.div
                       key={card.id}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.6 + index * 0.1, duration: 0.3 }}
+                      className="relative"
                     >
-                      <Card
-                        isPressable
-                        onPress={handleCardClick}
-                        className="w-full hover:scale-[1.02] transition-transform shadow-lg overflow-hidden"
-                        style={getCardStyle()}
-                      >
-                        <CardBody className="p-6 min-h-[120px] flex items-center justify-center relative">
-                          <div className="text-center w-full relative z-10">
-                            {/* Logo Style - Now works with all background types */}
-                            {card.style.logo_icon && (
-                              <div className="mb-2">
-                                <Icon
-                                  icon={card.style.logo_icon}
-                                  width={36}
-                                  style={{
-                                    color: card.style.logo_color || "#fff",
-                                    filter: card.style.type === "image" 
-                                      ? "drop-shadow(0 2px 4px rgba(0,0,0,0.3))"
-                                      : "none",
-                                  }}
-                                  className="mx-auto"
-                                />
-                                {card.style.logo_name && (
-                                  <p
-                                    className="font-bold text-lg mt-1"
-                                    style={{
-                                      color: card.style.logo_color || "#fff",
-                                      textShadow: card.style.type === "image"
-                                        ? "0 2px 4px rgba(0,0,0,0.3)"
-                                        : "none",
-                                    }}
-                                  >
-                                    {card.style.prefix_text && (
-                                      <span className="mr-1">
-                                        {card.style.prefix_text}
-                                      </span>
-                                    )}
-                                    {card.style.logo_name}
-                                  </p>
-                                )}
-                              </div>
-                            )}
-
-                            {/* Title and Description */}
-                            <h3
-                              className={`text-lg font-semibold ${
-                                card.style.type === "image" ||
-                                card.style.type === "gradient" ||
-                                card.style.type === "solid"
-                                  ? "text-white"
-                                  : "text-foreground"
-                              }`}
-                              style={{
-                                textShadow: card.style.type === "image"
-                                  ? "0 2px 8px rgba(0,0,0,0.5)"
-                                  : "none",
-                              }}
-                            >
-                              {card.title}
-                            </h3>
-                            {card.description && (
-                              <p
-                                className={`text-sm mt-1 ${
-                                  card.style.type === "image" ||
-                                  card.style.type === "gradient" ||
-                                  card.style.type === "solid"
-                                    ? "text-white/90"
-                                    : "text-default-500"
-                                }`}
-                                style={{
-                                  textShadow: card.style.type === "image"
-                                    ? "0 1px 4px rgba(0,0,0,0.5)"
-                                    : "none",
-                                }}
-                              >
-                                {card.description}
-                              </p>
-                            )}
-                          </div>
-                        </CardBody>
-                      </Card>
+                      {card.ctr_mechanisms ? (
+                        <CTACardWithMechanisms
+                          card={card}
+                          onReveal={() => {
+                            // onReveal just reveals the card, doesn't trigger navigation
+                            // The actual click will trigger navigation via renderCardContent's onPress
+                          }}
+                        >
+                          {renderCardContent()}
+                        </CTACardWithMechanisms>
+                      ) : (
+                        renderCardContent()
+                      )}
                     </motion.div>
                   );
                 })}
@@ -506,6 +579,39 @@ export function LandingPageViewer({
           </div>
         </div>
       </div>
+      </div>
+      
+      {/* Age Confirmation Modal - Only show in non-preview mode */}
+      {!isPreview && pendingAgeCard && (
+        <AgeConfirmationModal
+          isOpen={true}
+          onConfirm={() => {
+            // Add to confirmed set
+            setAgeConfirmedCards(prev => new Set(prev).add(pendingAgeCard));
+            setPendingAgeCard(null);
+            
+            // Find the card and trigger click
+            const card = settings.cta_cards?.find(c => c.id === pendingAgeCard);
+            if (card) {
+              // Track analytics
+              fetch("/api/analytics/track", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  link_id: link.id,
+                  event_type: "click",
+                }),
+              }).catch(console.error);
+
+              // Redirect to destination
+              window.location.href = card.url;
+            }
+          }}
+          onCancel={() => {
+            setPendingAgeCard(null);
+          }}
+        />
+      )}
     </div>
   );
 }

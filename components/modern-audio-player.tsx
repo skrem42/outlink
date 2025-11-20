@@ -17,11 +17,14 @@ export function ModernAudioPlayer({ src, theme = 'dark' }: ModernAudioPlayerProp
   const [currentTime, setCurrentTime] = useState(0);
   const waveformRef = useRef<HTMLDivElement>(null);
   const wavesurferRef = useRef<WaveSurfer | null>(null);
+  const isDestroyedRef = useRef(false);
 
   const isLightMode = theme === 'light';
 
   useEffect(() => {
     if (!waveformRef.current) return;
+
+    isDestroyedRef.current = false;
 
     // Initialize WaveSurfer with theme-aware colors
     const wavesurfer = WaveSurfer.create({
@@ -44,25 +47,46 @@ export function ModernAudioPlayer({ src, theme = 'dark' }: ModernAudioPlayerProp
 
     // Event listeners
     wavesurfer.on("ready", () => {
-      setIsLoading(false);
-      setDuration(wavesurfer.getDuration());
+      if (!isDestroyedRef.current) {
+        setIsLoading(false);
+        setDuration(wavesurfer.getDuration());
+      }
     });
 
     wavesurfer.on("audioprocess", () => {
-      setCurrentTime(wavesurfer.getCurrentTime());
+      if (!isDestroyedRef.current) {
+        setCurrentTime(wavesurfer.getCurrentTime());
+      }
     });
 
     wavesurfer.on("finish", () => {
-      setIsPlaying(false);
+      if (!isDestroyedRef.current) {
+        setIsPlaying(false);
+      }
+    });
+
+    wavesurfer.on("error", () => {
+      // Silently handle errors during loading/destruction
+      if (!isDestroyedRef.current) {
+        setIsLoading(false);
+      }
     });
 
     return () => {
+      isDestroyedRef.current = true;
       if (wavesurfer) {
-        try {
-          wavesurfer.destroy();
-        } catch (e) {
-          // Ignore cleanup errors
-        }
+        // Unsubscribe prevents events from firing during destruction
+        wavesurfer.unAll();
+        // Small delay to ensure unsubscribe completes
+        setTimeout(() => {
+          try {
+            if (!wavesurfer.isDestroyed) {
+              wavesurfer.destroy();
+            }
+          } catch (e) {
+            // Silently ignore destruction errors
+          }
+        }, 0);
       }
     };
   }, [src, isLightMode]);
