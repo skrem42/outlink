@@ -56,6 +56,17 @@ export async function POST(request: NextRequest) {
       country: body.country || null,
       city: body.city || null,
       device_type,
+      browser: body.browser || null,
+      os: body.os || null,
+      screen_resolution: body.screen_resolution || null,
+      utm_source: body.utm_source || null,
+      utm_medium: body.utm_medium || null,
+      utm_campaign: body.utm_campaign || null,
+      session_id: body.session_id || null,
+      is_bot: body.is_bot || false,
+      page_load_time: body.page_load_time || null,
+      latitude: body.latitude || null,
+      longitude: body.longitude || null,
     };
 
     const { data, error } = await supabase

@@ -7,6 +7,8 @@ import { Button } from "@heroui/button";
 import { DateRangePicker } from "@heroui/date-picker";
 import { Spinner } from "@heroui/spinner";
 import { Icon } from "@iconify/react";
+import { Tabs, Tab } from "@heroui/tabs";
+import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@heroui/dropdown";
 import { ChartCard } from "@/components/chart-card";
 import type { ChartCardProps } from "@/components/chart-card";
 import AnalyticsChart from "@/components/analytics-chart";
@@ -32,7 +34,17 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { api } from "@/lib/api-client";
-import type { Link, AnalyticsData } from "@/types/database";
+import type { Link, AnalyticsData, RealtimeData } from "@/types/database";
+import { exportToCSV, exportToJSON } from "@/lib/analytics-export";
+import { GeoAnalytics } from "@/components/analytics/geo-analytics";
+import { DeviceAnalytics } from "@/components/analytics/device-analytics";
+import { TimeAnalytics } from "@/components/analytics/time-analytics";
+import { ReferrerAnalytics } from "@/components/analytics/referrer-analytics";
+import { FunnelAnalytics } from "@/components/analytics/funnel-analytics";
+import { RealtimeAnalytics } from "@/components/analytics/realtime-analytics";
+import { EngagementAnalytics } from "@/components/analytics/engagement-analytics";
+import { LinkComparison } from "@/components/analytics/link-comparison";
+import { QualityMetrics } from "@/components/analytics/quality-metrics";
 
 // KPI Stats data
 const kpiStatsData: Omit<ChartCardProps, "index">[] = [
@@ -280,9 +292,11 @@ function AnalyticsContent() {
   // State for real data
   const [links, setLinks] = React.useState<Link[]>([]);
   const [analyticsData, setAnalyticsData] = React.useState<AnalyticsData | null>(null);
+  const [realtimeData, setRealtimeData] = React.useState<RealtimeData | null>(null);
   const [isLoadingLinks, setIsLoadingLinks] = React.useState(true);
   const [isLoadingAnalytics, setIsLoadingAnalytics] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [activeTab, setActiveTab] = React.useState("overview");
 
   // Fetch links on mount
   React.useEffect(() => {
@@ -293,8 +307,19 @@ function AnalyticsContent() {
   React.useEffect(() => {
     if (dateRange) {
       fetchAnalytics();
+      fetchRealtimeData();
     }
   }, [selectedLink, dateRange]);
+
+  // Auto-refresh realtime data
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      if (activeTab === "realtime") {
+        fetchRealtimeData();
+      }
+    }, 10000); // Refresh every 10 seconds
+    return () => clearInterval(interval);
+  }, [activeTab]);
 
   const fetchLinks = async () => {
     try {
@@ -339,6 +364,29 @@ function AnalyticsContent() {
       setError("Failed to load analytics data");
     } finally {
       setIsLoadingAnalytics(false);
+    }
+  };
+
+  const fetchRealtimeData = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (selectedLink && selectedLink !== "all") {
+        params.append("link_id", selectedLink);
+      }
+      const data = await api.get<RealtimeData>(`/api/analytics/realtime?${params.toString()}`);
+      setRealtimeData(data);
+    } catch (err) {
+      console.error("Error fetching realtime data:", err);
+    }
+  };
+
+  const handleExport = (format: 'csv' | 'json') => {
+    if (!analyticsData) return;
+    
+    if (format === 'csv') {
+      exportToCSV(analyticsData);
+    } else {
+      exportToJSON(analyticsData);
     }
   };
 
@@ -640,6 +688,13 @@ function AnalyticsContent() {
     ];
   }, [analyticsData]);
 
+  // Helper function to format session duration
+  const formatSessionDuration = (seconds: number): string => {
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${minutes}m ${secs}s`;
+  };
+
   // Generate KPI data from analytics
   const computedKpiStats = React.useMemo((): Omit<ChartCardProps, "index">[] => {
     if (!analyticsData) {
@@ -663,15 +718,27 @@ function AnalyticsContent() {
         xaxis: "month" as const,
       },
       {
-        title: "Total Views",
-        value: analyticsData.total_views.toLocaleString(),
-        chartData: analyticsData.chart_data.slice(-30).map((item) => ({
-          month: item.date,
-          value: item.views,
+        title: "Unique Clicks",
+        value: analyticsData.unique_visitors.toLocaleString(),
+        chartData: chartDataForSparkline.slice(-7).map((item, idx) => ({
+          month: `Day ${idx + 1}`,
+          value: Math.floor(item.value * 0.7), // Approximate unique from clicks
         })),
-        icon: "solar:eye-linear",
         change: "+8.3%", // TODO: Calculate from previous period
         color: "success" as const,
+        icon: "solar:users-group-rounded-linear",
+        xaxis: "day" as const,
+      },
+      {
+        title: "Bounce Rate",
+        value: `${analyticsData.bounce_rate.toFixed(1)}%`,
+        chartData: analyticsData.chart_data.slice(-30).map((item) => ({
+          month: item.date,
+          value: analyticsData.bounce_rate + (Math.random() - 0.5) * 5, // Vary slightly
+        })),
+        change: "-5.9%", // TODO: Calculate from previous period
+        color: "secondary" as const,
+        icon: "solar:spedometer-max-linear",
         xaxis: "month" as const,
       },
       {
@@ -687,28 +754,16 @@ function AnalyticsContent() {
         xaxis: "month" as const,
       },
       {
-        title: "Unique Visitors",
-        value: analyticsData.unique_visitors.toLocaleString(),
-        chartData: chartDataForSparkline.slice(-7).map((item, idx) => ({
+        title: "Avg. Visitor Time",
+        value: formatSessionDuration(analyticsData.avg_session_duration),
+        chartData: analyticsData.chart_data.slice(-7).map((item, idx) => ({
           month: `Day ${idx + 1}`,
-          value: Math.floor(item.value * 0.7), // Approximate unique from clicks
+          value: analyticsData.avg_session_duration + (Math.random() - 0.5) * 60, // Vary slightly
         })),
         change: "-1.2%", // TODO: Calculate from previous period
         color: "default" as const,
-        icon: "solar:user-linear",
+        icon: "solar:clock-circle-linear",
         xaxis: "day" as const,
-      },
-      {
-        title: "Bounce Rate",
-        value: `${analyticsData.bounce_rate.toFixed(1)}%`,
-        chartData: analyticsData.chart_data.slice(-30).map((item) => ({
-          month: item.date,
-          value: analyticsData.bounce_rate + (Math.random() - 0.5) * 5, // Vary slightly
-        })),
-        change: "-5.9%", // TODO: Calculate from previous period
-        color: "secondary" as const,
-        icon: "solar:spedometer-max-linear",
-        xaxis: "month" as const,
       },
       {
         title: "Active Links",
@@ -768,6 +823,13 @@ function AnalyticsContent() {
               size="sm"
               startContent={<Icon icon="solar:link-circle-linear" width={18} />}
               isDisabled={isLoadingLinks}
+              renderValue={(items) => {
+                const item = items[0];
+                if (!item) return "Select Link";
+                if (item.key === "all") return "All Links";
+                const link = links.find(l => l.id === item.key);
+                return link ? `${link.domain}/${link.path} (${link.clicks} clicks)` : "Select Link";
+              }}
             >
               <SelectItem key="all" value="all">
                 All Links
@@ -827,13 +889,41 @@ function AnalyticsContent() {
                 </SelectItem>
               ))}
             </Select>
+            <Dropdown>
+              <DropdownTrigger>
             <Button
               color="primary"
               startContent={<Icon icon="solar:download-linear" width={18} />}
               className="w-full sm:w-auto"
+                  isDisabled={!analyticsData}
             >
               Export
             </Button>
+              </DropdownTrigger>
+              <DropdownMenu aria-label="Export options">
+                <DropdownItem
+                  key="csv"
+                  startContent={<Icon icon="solar:document-linear" width={18} />}
+                  onPress={() => handleExport('csv')}
+                >
+                  Export as CSV
+                </DropdownItem>
+                <DropdownItem
+                  key="json"
+                  startContent={<Icon icon="solar:code-file-linear" width={18} />}
+                  onPress={() => handleExport('json')}
+                >
+                  Export as JSON
+                </DropdownItem>
+                <DropdownItem
+                  key="pdf"
+                  startContent={<Icon icon="solar:file-text-linear" width={18} />}
+                  onPress={() => alert('PDF export coming soon!')}
+                >
+                  Export as PDF (Coming Soon)
+                </DropdownItem>
+              </DropdownMenu>
+            </Dropdown>
           </div>
         </div>
       </div>
@@ -843,19 +933,7 @@ function AnalyticsContent() {
         <div className="flex justify-center items-center py-12">
           <Spinner size="lg" label="Loading analytics..." />
         </div>
-      ) : (
-        <>
-          <dl className="grid w-full grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3">
-            {computedKpiStats.map((stat, index) => (
-              <ChartCard key={index} {...stat} index={index} />
-            ))}
-          </dl>
-
-          {/* Analytics Chart - Graph 2 */}
-          {analyticsData && transformedChartData && <AnalyticsChart data={transformedChartData} />}
-
-          {/* Empty state when no analytics data */}
-          {!analyticsData && (
+      ) : !analyticsData ? (
             <Card>
               <CardBody className="flex flex-col items-center justify-center py-12 gap-4">
                 <Icon icon="solar:chart-bold-duotone" className="text-default-300" width={64} />
@@ -871,135 +949,306 @@ function AnalyticsContent() {
                 </Button>
               </CardBody>
             </Card>
-          )}
+      ) : (
+        <>
+          <dl className="grid w-full grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3">
+            {computedKpiStats.map((stat, index) => (
+              <ChartCard key={index} {...stat} index={index} />
+            ))}
+          </dl>
+
+          {/* Tabbed Analytics Interface */}
+          <Tabs
+            aria-label="Analytics sections"
+            selectedKey={activeTab}
+            onSelectionChange={(key) => setActiveTab(key as string)}
+            variant="underlined"
+            color="primary"
+            classNames={{
+              tabList: "gap-6 w-full relative rounded-none p-0 border-b border-divider",
+              cursor: "bg-primary",
+              tab: "max-w-fit px-4 h-12",
+            }}
+          >
+            <Tab
+              key="overview"
+              title={
+                <div className="flex items-center gap-2">
+                  <Icon icon="solar:chart-linear" width={20} />
+                  <span>Overview</span>
+                </div>
+              }
+            >
+              <div className="py-6 space-y-6">
+                {transformedChartData && <AnalyticsChart data={transformedChartData} />}
+                
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader className="flex flex-col items-start">
+                      <h3 className="text-lg font-semibold">Traffic by Hour</h3>
+                      <p className="text-small text-default-500">Peak engagement times</p>
+                    </CardHeader>
+                    <CardBody>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <BarChart data={hourlyData}>
+                          <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                          <XAxis dataKey="hour" stroke="#888" fontSize={12} />
+                          <YAxis stroke="#888" fontSize={12} />
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: "rgba(0, 0, 0, 0.8)",
+                              border: "none",
+                              borderRadius: "8px",
+                            }}
+                          />
+                          <Bar dataKey="clicks" fill="#0ea5e9" radius={[8, 8, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </CardBody>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="flex flex-col items-start">
+                      <h3 className="text-lg font-semibold">Device Breakdown</h3>
+                      <p className="text-small text-default-500">Traffic by device type</p>
+                    </CardHeader>
+                    <CardBody className="flex items-center justify-center">
+                      <ResponsiveContainer width="100%" height={300}>
+                        <PieChart>
+                          <Pie
+                            data={deviceData}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            label={({ name, value }) => `${name}: ${value}%`}
+                            outerRadius={100}
+                            fill="#8884d8"
+                            dataKey="value"
+                          >
+                            {deviceData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </CardBody>
+                  </Card>
+                </div>
+              </div>
+            </Tab>
+
+            <Tab
+              key="geographic"
+              title={
+                <div className="flex items-center gap-2">
+                  <Icon icon="solar:map-point-linear" width={20} />
+                  <span>Geographic</span>
+                </div>
+              }
+            >
+              <div className="py-6">
+                {analyticsData.geographic_data && analyticsData.geographic_data.length > 0 ? (
+                  <GeoAnalytics data={analyticsData.geographic_data} />
+                ) : (
+                  <Card>
+                    <CardBody className="flex flex-col items-center justify-center py-12 gap-4">
+                      <Icon icon="solar:map-linear" className="text-default-300" width={64} />
+                      <p className="text-lg font-semibold">No Geographic Data</p>
+                      <p className="text-default-500 text-center max-w-md">
+                        Geographic data will appear here once visitors access your links. 
+                        Make sure your analytics are tracking location information.
+                      </p>
+                    </CardBody>
+                  </Card>
+                )}
+              </div>
+            </Tab>
+
+            <Tab
+              key="devices"
+              title={
+                <div className="flex items-center gap-2">
+                  <Icon icon="solar:devices-linear" width={20} />
+                  <span>Devices & Browsers</span>
+                </div>
+              }
+            >
+              <div className="py-6">
+                {analyticsData.device_breakdown && analyticsData.device_breakdown.length > 0 ? (
+                  <DeviceAnalytics
+                    devices={analyticsData.device_breakdown}
+                    browsers={analyticsData.browser_breakdown || []}
+                    os={analyticsData.os_breakdown || []}
+                    resolutions={analyticsData.screen_resolutions || []}
+                  />
+                ) : (
+                  <Card>
+                    <CardBody className="flex flex-col items-center justify-center py-12 gap-4">
+                      <Icon icon="solar:devices-linear" className="text-default-300" width={64} />
+                      <p className="text-lg font-semibold">No Device Data</p>
+                      <p className="text-default-500 text-center max-w-md">
+                        Device and browser information will appear here once visitors access your links.
+                      </p>
+                    </CardBody>
+                  </Card>
+                )}
+              </div>
+            </Tab>
+
+            <Tab
+              key="time"
+              title={
+                <div className="flex items-center gap-2">
+                  <Icon icon="solar:clock-circle-linear" width={20} />
+                  <span>Time Patterns</span>
+                </div>
+              }
+            >
+              <div className="py-6">
+                {analyticsData.hourly_patterns && analyticsData.hourly_patterns.length > 0 ? (
+                  <TimeAnalytics hourlyPatterns={analyticsData.hourly_patterns} />
+                ) : (
+                  <Card>
+                    <CardBody className="flex flex-col items-center justify-center py-12 gap-4">
+                      <Icon icon="solar:clock-circle-linear" className="text-default-300" width={64} />
+                      <p className="text-lg font-semibold">No Time Pattern Data</p>
+                      <p className="text-default-500 text-center max-w-md">
+                        Hourly and daily traffic patterns will appear here once you have more data.
+                      </p>
+                    </CardBody>
+                  </Card>
+                )}
+              </div>
+            </Tab>
+
+            <Tab
+              key="sources"
+              title={
+                <div className="flex items-center gap-2">
+                  <Icon icon="solar:link-circle-linear" width={20} />
+                  <span>Traffic Sources</span>
+                </div>
+              }
+            >
+              <div className="py-6">
+                {analyticsData.referrer_data && analyticsData.referrer_data.length > 0 ? (
+                  <ReferrerAnalytics
+                    referrers={analyticsData.referrer_data}
+                    utmData={analyticsData.utm_data || []}
+                  />
+                ) : (
+                  <Card>
+                    <CardBody className="flex flex-col items-center justify-center py-12 gap-4">
+                      <Icon icon="solar:link-minimalistic-linear" className="text-default-300" width={64} />
+                      <p className="text-lg font-semibold">No Traffic Source Data</p>
+                      <p className="text-default-500 text-center max-w-md">
+                        Referrer and UTM tracking data will appear here once visitors access your links from various sources.
+                      </p>
+                    </CardBody>
+                  </Card>
+                )}
+              </div>
+            </Tab>
+
+            <Tab
+              key="funnel"
+              title={
+                <div className="flex items-center gap-2">
+                  <Icon icon="solar:filter-linear" width={20} />
+                  <span>Conversion Funnel</span>
+                </div>
+              }
+            >
+              <div className="py-6">
+                {analyticsData.funnel_stages && (
+                  <FunnelAnalytics funnelStages={analyticsData.funnel_stages} />
+                )}
+              </div>
+            </Tab>
+
+            <Tab
+              key="realtime"
+              title={
+                <div className="flex items-center gap-2">
+                  <Icon icon="solar:play-circle-linear" width={20} />
+                  <span>Real-Time</span>
+                  <span className="w-2 h-2 bg-success rounded-full animate-pulse" />
+                </div>
+              }
+            >
+              <div className="py-6">
+                {realtimeData && (
+                  <RealtimeAnalytics data={realtimeData} autoRefresh={activeTab === "realtime"} />
+                )}
+              </div>
+            </Tab>
+
+            <Tab
+              key="engagement"
+              title={
+                <div className="flex items-center gap-2">
+                  <Icon icon="solar:users-group-rounded-linear" width={20} />
+                  <span>Engagement</span>
+                </div>
+              }
+            >
+              <div className="py-6">
+                <EngagementAnalytics
+                  avgSessionDuration={analyticsData.avg_session_duration}
+                  pagesPerSession={analyticsData.pages_per_session}
+                  bounceRate={analyticsData.bounce_rate}
+                  totalSessions={analyticsData.total_clicks}
+                />
+              </div>
+            </Tab>
+
+            <Tab
+              key="links"
+              title={
+                <div className="flex items-center gap-2">
+                  <Icon icon="solar:ranking-linear" width={20} />
+                  <span>Link Performance</span>
+                </div>
+              }
+            >
+              <div className="py-6">
+                {analyticsData.link_performance && analyticsData.link_performance.length > 0 ? (
+                  <LinkComparison links={analyticsData.link_performance} />
+                ) : (
+                  <Card>
+                    <CardBody className="flex flex-col items-center justify-center py-12 gap-4">
+                      <Icon icon="solar:link-broken-linear" className="text-default-300" width={64} />
+                      <p className="text-lg font-semibold">No Link Comparison Data</p>
+                      <p className="text-default-500 text-center max-w-md">
+                        Link performance comparison is only available when viewing all links. 
+                        Select "All Links" from the dropdown above to see performance rankings.
+                      </p>
+                    </CardBody>
+                  </Card>
+                )}
+              </div>
+            </Tab>
+
+            <Tab
+              key="quality"
+              title={
+                <div className="flex items-center gap-2">
+                  <Icon icon="solar:shield-check-linear" width={20} />
+                  <span>Traffic Quality</span>
+                </div>
+              }
+            >
+              <div className="py-6">
+                {analyticsData.traffic_quality && (
+                  <QualityMetrics quality={analyticsData.traffic_quality} />
+                )}
+              </div>
+            </Tab>
+          </Tabs>
         </>
       )}
 
-      {/* Additional Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Traffic by Hour */}
-        <Card>
-          <CardHeader className="flex flex-col items-start">
-            <h3 className="text-lg font-semibold">Traffic by Hour</h3>
-            <p className="text-small text-default-500">Peak engagement times</p>
-          </CardHeader>
-          <CardBody>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={hourlyData}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                <XAxis dataKey="hour" stroke="#888" fontSize={12} />
-                <YAxis stroke="#888" fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "rgba(0, 0, 0, 0.8)",
-                    border: "none",
-                    borderRadius: "8px",
-                  }}
-                />
-                <Bar dataKey="clicks" fill="#0ea5e9" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardBody>
-        </Card>
-
-        {/* Device Breakdown */}
-        <Card>
-          <CardHeader className="flex flex-col items-start">
-            <h3 className="text-lg font-semibold">Device Breakdown</h3>
-            <p className="text-small text-default-500">Traffic by device type</p>
-          </CardHeader>
-          <CardBody className="flex items-center justify-center">
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={deviceData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, value }) => `${name}: ${value}%`}
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {deviceData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardBody>
-        </Card>
-
-        {/* Top Links */}
-        <Card className="lg:col-span-2">
-          <CardHeader className="flex flex-col items-start">
-            <h3 className="text-lg font-semibold">Top Performing Links</h3>
-            <p className="text-small text-default-500">Most clicked links</p>
-          </CardHeader>
-          <CardBody>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={topLinksData} layout="horizontal">
-                <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                <XAxis type="number" stroke="#888" fontSize={12} />
-                <YAxis
-                  type="category"
-                  dataKey="name"
-                  stroke="#888"
-                  fontSize={12}
-                  width={80}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "rgba(0, 0, 0, 0.8)",
-                    border: "none",
-                    borderRadius: "8px",
-                  }}
-                />
-                <Bar dataKey="clicks" radius={[0, 8, 8, 0]}>
-                  {topLinksData.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </CardBody>
-        </Card>
-      </div>
-
-      {/* Referral Sources */}
-      <Card>
-        <CardHeader>
-          <h3 className="text-lg font-semibold">Referral Sources</h3>
-        </CardHeader>
-        <CardBody>
-          <div className="space-y-4">
-            {[
-              { source: "Direct", percentage: 45, color: "bg-primary" },
-              { source: "Social Media", percentage: 30, color: "bg-success" },
-              { source: "Search Engines", percentage: 15, color: "bg-warning" },
-              { source: "Email", percentage: 7, color: "bg-secondary" },
-              { source: "Other", percentage: 3, color: "bg-default" },
-            ].map((item) => (
-              <div key={item.source} className="space-y-2">
-                <div className="flex justify-between text-small">
-                  <span>{item.source}</span>
-                  <span className="font-semibold">{item.percentage}%</span>
-                </div>
-                <div className="w-full bg-default-200 rounded-full h-2">
-                  <div
-                    className={`${item.color} h-2 rounded-full transition-all duration-500`}
-                    style={{ width: `${item.percentage}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardBody>
-      </Card>
     </div>
   );
 }

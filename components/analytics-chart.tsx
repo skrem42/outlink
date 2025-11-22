@@ -40,7 +40,7 @@ const formatValue = (value: number, type: string | undefined) => {
     }
     return value.toLocaleString();
   }
-  if (type === "percentage") return `${value}%`;
+  if (type === "percentage") return `${value.toFixed(1)}%`;
   return value;
 };
 
@@ -93,7 +93,7 @@ export default function AnalyticsChart({ data }: AnalyticsChartProps) {
         <div className="flex flex-col justify-between gap-y-2 p-6">
           <div className="flex flex-col gap-y-2">
             <div className="flex flex-col gap-y-0">
-              <dt className="text-medium text-foreground font-medium"></dt> 
+              <dt className="text-medium text-foreground font-medium">KPI Stats</dt> 
             </div>
             <div className="mt-4 flex w-full items-center">
               <div className="-my-3 flex w-full max-w-[800px] items-center gap-x-3 overflow-x-auto py-3">

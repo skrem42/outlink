@@ -73,6 +73,17 @@ export interface AnalyticsEvent {
   country: string | null;
   city: string | null;
   device_type: string | null;
+  browser: string | null;
+  os: string | null;
+  screen_resolution: string | null;
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+  session_id: string | null;
+  is_bot: boolean;
+  page_load_time: number | null;
+  latitude: number | null;
+  longitude: number | null;
   created_at: string;
 }
 
@@ -330,6 +341,17 @@ export interface TrackEventRequest {
   country?: string;
   city?: string;
   device_type?: string;
+  browser?: string;
+  os?: string;
+  screen_resolution?: string;
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  session_id?: string;
+  is_bot?: boolean;
+  page_load_time?: number;
+  latitude?: number;
+  longitude?: number;
 }
 
 // API Response types
@@ -337,6 +359,109 @@ export interface ApiResponse<T> {
   data?: T;
   error?: string;
   message?: string;
+}
+
+export interface GeographicData {
+  country: string;
+  country_code: string;
+  clicks: number;
+  conversions: number;
+  conversion_rate: number;
+  cities: {
+    city: string;
+    clicks: number;
+    conversions: number;
+  }[];
+}
+
+export interface DeviceBreakdown {
+  device_type: string;
+  count: number;
+  percentage: number;
+}
+
+export interface BrowserBreakdown {
+  browser: string;
+  version: string | null;
+  count: number;
+  percentage: number;
+}
+
+export interface OSBreakdown {
+  os: string;
+  count: number;
+  percentage: number;
+}
+
+export interface ScreenResolutionData {
+  resolution: string;
+  count: number;
+  percentage: number;
+}
+
+export interface UTMData {
+  source: string;
+  medium: string;
+  campaign: string;
+  clicks: number;
+  conversions: number;
+  conversion_rate: number;
+}
+
+export interface ReferrerData {
+  referrer: string;
+  clicks: number;
+  conversions: number;
+  is_direct: boolean;
+}
+
+export interface HourlyPattern {
+  hour: number;
+  day_of_week: number;
+  clicks: number;
+  conversions: number;
+}
+
+export interface FunnelStage {
+  stage: 'view' | 'click' | 'conversion';
+  count: number;
+  dropoff_rate: number;
+}
+
+export interface SessionData {
+  session_id: string;
+  duration: number;
+  pages_viewed: number;
+  device_type: string;
+  converted: boolean;
+}
+
+export interface RealtimeData {
+  active_visitors: number;
+  recent_events: AnalyticsEvent[];
+  clicks_last_hour: number;
+  conversions_last_hour: number;
+}
+
+export interface TrafficQuality {
+  total_traffic: number;
+  bot_traffic: number;
+  human_traffic: number;
+  bot_percentage: number;
+  suspicious_ips: string[];
+  quality_score: number;
+}
+
+export interface LinkPerformance {
+  link_id: string;
+  domain: string;
+  path: string;
+  clicks: number;
+  conversions: number;
+  conversion_rate: number;
+  ctr: number;
+  health_score: number;
+  rank: number;
 }
 
 export interface AnalyticsData {
@@ -355,6 +480,20 @@ export interface AnalyticsData {
     views: number;
     conversions: number;
   }[];
+  // Enhanced analytics data
+  geographic_data?: GeographicData[];
+  device_breakdown?: DeviceBreakdown[];
+  browser_breakdown?: BrowserBreakdown[];
+  os_breakdown?: OSBreakdown[];
+  screen_resolutions?: ScreenResolutionData[];
+  utm_data?: UTMData[];
+  referrer_data?: ReferrerData[];
+  hourly_patterns?: HourlyPattern[];
+  funnel_stages?: FunnelStage[];
+  session_data?: SessionData[];
+  realtime_data?: RealtimeData;
+  traffic_quality?: TrafficQuality;
+  link_performance?: LinkPerformance[];
 }
 
 export interface DashboardStats {
