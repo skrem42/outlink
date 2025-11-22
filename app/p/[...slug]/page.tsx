@@ -1,7 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { LandingPageViewer } from "@/components/landing-page-viewer";
-import type { Link, LandingPageSettings } from "@/types/database";
+import { GreyhatPageViewer } from "@/components/greyhat-page-viewer";
+import type { Link, LandingPageSettings, GreyhatPageSettings } from "@/types/database";
 
 interface PageProps {
   params: Promise<{
@@ -41,9 +42,54 @@ export default async function PublicLandingPage({ params }: PageProps) {
   }
 
   if (link.link_type === "greyhat") {
-    // TODO: Implement age-gated landing page
-    // For now, redirect
-    redirect(link.destination_url);
+    // Fetch greyhat page settings
+    const { data: settings } = await supabase
+      .from("greyhat_page_settings")
+      .select("*")
+      .eq("link_id", link.id)
+      .single();
+
+    // If no settings found, create default settings
+    if (!settings) {
+      const defaultSettings: Partial<GreyhatPageSettings> = {
+        link_id: link.id,
+        warning_title: "18+ Content Warning",
+        warning_message: "You must be at least 18 years old to access this content. Please confirm your age to continue.",
+        confirm_button_text: "I'm 18 or Older",
+        background_color: "#18181b",
+        card_background_color: "#27272a",
+        button_color: "#EC4899",
+        text_color: "#ffffff",
+        icon_color: "#EC4899",
+      };
+
+      const { data: newSettings } = await supabase
+        .from("greyhat_page_settings")
+        .insert(defaultSettings)
+        .select()
+        .single();
+
+      if (!newSettings) {
+        // If we can't create settings, show basic redirect
+        redirect(link.destination_url);
+      }
+
+      // Track view event
+      await supabase.from("analytics_events").insert({
+        link_id: link.id,
+        event_type: "view",
+      });
+
+      return <GreyhatPageViewer link={link} settings={newSettings} />;
+    }
+
+    // Track view event
+    await supabase.from("analytics_events").insert({
+      link_id: link.id,
+      event_type: "view",
+    });
+
+    return <GreyhatPageViewer link={link} settings={settings} />;
   }
 
   // Fetch landing page settings for whitehat links

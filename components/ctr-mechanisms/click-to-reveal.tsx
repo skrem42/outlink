@@ -39,26 +39,26 @@ export function ClickToReveal({
   }
 
   return (
-    <div className="relative">
-      <div className="absolute inset-0 backdrop-blur-md bg-black/60 z-[5] flex flex-col items-center justify-center px-6 pt-20 pb-12 rounded-xl">
+    <div className="relative overflow-hidden rounded-xl">
+      <div className="absolute inset-0 backdrop-blur-md bg-black/60 z-[5] flex flex-col items-center justify-center px-4 py-4 rounded-xl">
         <motion.div
           animate={clickCount > 0 ? { scale: [1, 1.1, 1] } : {}}
           transition={{ duration: 0.3 }}
-          className="text-center space-y-4"
+          className="text-center space-y-2"
         >
           <Icon
             icon="solar:click-bold-duotone"
-            width={56}
+            width={40}
             className="text-white mx-auto drop-shadow-lg"
           />
-          <div className="space-y-2">
-            <p className="text-white font-semibold text-lg drop-shadow-md">{buttonText}</p>
-            <p className="text-white/80 text-sm drop-shadow-sm">
+          <div className="space-y-1">
+            <p className="text-white font-semibold text-base drop-shadow-md">{buttonText}</p>
+            <p className="text-white/80 text-xs drop-shadow-sm">
               {clicksRequired - clickCount} more {clicksRequired - clickCount === 1 ? 'tap' : 'taps'} to unlock
             </p>
           </div>
           <Button
-            size="lg"
+            size="md"
             color="primary"
             onPress={handleClick}
             className="font-bold shadow-lg"
@@ -67,7 +67,7 @@ export function ClickToReveal({
           </Button>
           <Progress
             value={progress}
-            className="max-w-md"
+            className="max-w-[200px]"
             color="primary"
             size="sm"
           />

@@ -5,6 +5,7 @@ import { Button } from "@heroui/button";
 import { Card, CardBody } from "@heroui/card";
 import { Icon } from "@iconify/react";
 import { Spinner } from "@heroui/spinner";
+import { addToast } from "@heroui/toast";
 
 interface AudioUploaderProps {
   value?: string | null;
@@ -27,13 +28,21 @@ export function AudioUploader({
 
     // Validate file type
     if (!file.type.startsWith("audio/")) {
-      alert("Please select an audio file");
+      addToast({
+        title: "Invalid File Type",
+        description: "Please select an audio file",
+        color: "warning",
+      });
       return;
     }
 
     // Validate file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
-      alert("File size must be less than 10MB");
+      addToast({
+        title: "File Too Large",
+        description: "File size must be less than 10MB",
+        color: "warning",
+      });
       return;
     }
 
@@ -51,7 +60,11 @@ export function AudioUploader({
       onChange(dataUrl);
     } catch (error) {
       console.error("Upload error:", error);
-      alert("Failed to upload audio");
+      addToast({
+        title: "Error",
+        description: "Failed to upload audio",
+        color: "danger",
+      });
     } finally {
       setUploading(false);
     }
@@ -147,5 +160,6 @@ export function AudioUploader({
     </div>
   );
 }
+
 
 

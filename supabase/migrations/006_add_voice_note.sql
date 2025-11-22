@@ -3,3 +3,4 @@ ALTER TABLE landing_page_settings
 ADD COLUMN IF NOT EXISTS voice_note_url TEXT;
 
 
+

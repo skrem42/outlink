@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { LinkSuccessScreen } from "./link-success-screen";
 import { api } from "@/lib/api-client";
 import type { Creator, Domain, Link } from "@/types/database";
+import { addToast } from "@heroui/toast";
 
 interface NewLinkDrawerProps {
   isOpen: boolean;
@@ -138,7 +139,11 @@ export function NewLinkDrawer({
       setDomains(domainsData);
     } catch (error) {
       console.error("Error fetching data:", error);
-      alert("Failed to load data. Please try again.");
+      addToast({
+        title: "Error",
+        description: "Failed to load data. Please try again.",
+        color: "danger",
+      });
     } finally {
       setIsLoadingData(false);
     }
@@ -209,11 +214,34 @@ export function NewLinkDrawer({
         }
       }
 
+      // Auto-create greyhat page settings for greyhat links
+      if (formData.linkType === "greyhat") {
+        try {
+          await api.patch(`/api/greyhat-page/${newLink.id}`, {
+            warning_title: "18+ Content Warning",
+            warning_message: "You must be at least 18 years old to access this content. Please confirm your age to continue.",
+            confirm_button_text: "I'm 18 or Older",
+            background_color: "#18181b",
+            card_background_color: "#27272a",
+            button_color: "#EC4899",
+            text_color: "#ffffff",
+            icon_color: "#EC4899",
+          });
+        } catch (settingsError) {
+          console.error("Error creating greyhat page settings:", settingsError);
+          // Don't fail the whole operation if settings creation fails
+        }
+      }
+
       setShowSuccess(true);
       onSuccess();
     } catch (error) {
       console.error("Error creating link:", error);
-      alert("Failed to create link. Please try again.");
+      addToast({
+        title: "Error",
+        description: "Failed to create link. Please try again.",
+        color: "danger",
+      });
     } finally {
       setIsSubmitting(false);
     }

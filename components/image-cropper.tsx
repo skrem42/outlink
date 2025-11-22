@@ -6,6 +6,7 @@ import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@herou
 import { Button } from "@heroui/button";
 import { Select, SelectItem } from "@heroui/select";
 import { Icon } from "@iconify/react";
+import { addToast } from "@heroui/toast";
 
 interface ImageCropperProps {
   isOpen: boolean;
@@ -117,7 +118,11 @@ export function ImageCropper({
       onClose();
     } catch (error) {
       console.error("Error cropping image:", error);
-      alert("Failed to crop image");
+      addToast({
+        title: "Error",
+        description: "Failed to crop image",
+        color: "danger",
+      });
     } finally {
       setIsProcessing(false);
     }

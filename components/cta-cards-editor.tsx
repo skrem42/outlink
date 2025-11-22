@@ -347,7 +347,14 @@ export function CTACardsEditor({ value, onChange }: CTACardsEditorProps) {
                       label="Destination URL"
                       placeholder="https://..."
                       value={editingCard.url}
-                      onChange={(e) => updateEditingCard({ url: e.target.value })}
+                      onChange={(e) => {
+                        const url = e.target.value;
+                        updateEditingCard({ url });
+                        // Auto-enable 18+ for adult platform URLs
+                        if (url.toLowerCase().includes("onlyfans.com") || url.toLowerCase().includes("fansly.com")) {
+                          updateEditingCard({ require_18plus: true, url });
+                        }
+                      }}
                     />
 
                     {/* Logo Options */}
@@ -402,6 +409,10 @@ export function CTACardsEditor({ value, onChange }: CTACardsEditorProps) {
                                     logo_icon: brand.icon,
                                     logo_color: brand.color,
                                   });
+                                  // Auto-enable 18+ for adult platforms
+                                  if (brand.label === "OnlyFans" || brand.label === "Fansly") {
+                                    updateEditingCard({ require_18plus: true });
+                                  }
                                 }
                               }}
                             >
@@ -1214,6 +1225,12 @@ export function CTACardsEditor({ value, onChange }: CTACardsEditorProps) {
                         <div className="pt-4 border-t border-default-200">
                           <Switch
                             isSelected={editingCard.require_18plus || false}
+                            isDisabled={
+                              editingCard.style.logo_name === "OnlyFans" ||
+                              editingCard.style.logo_name === "Fansly" ||
+                              editingCard.url.toLowerCase().includes("onlyfans.com") ||
+                              editingCard.url.toLowerCase().includes("fansly.com")
+                            }
                             onValueChange={(checked) =>
                               updateEditingCard({ require_18plus: checked })
                             }
@@ -1226,7 +1243,12 @@ export function CTACardsEditor({ value, onChange }: CTACardsEditorProps) {
                             </div>
                           </Switch>
                           <p className="text-xs text-default-500 mt-1 ml-10">
-                            Shows two-step age confirmation for adult platforms (OnlyFans, Fansly, etc.)
+                            {(editingCard.style.logo_name === "OnlyFans" ||
+                              editingCard.style.logo_name === "Fansly" ||
+                              editingCard.url.toLowerCase().includes("onlyfans.com") ||
+                              editingCard.url.toLowerCase().includes("fansly.com"))
+                              ? "Age confirmation is required for adult platforms (automatically enabled)"
+                              : "Shows age confirmation for adult platforms (OnlyFans, Fansly, etc.)"}
                           </p>
                         </div>
                       </CardBody>

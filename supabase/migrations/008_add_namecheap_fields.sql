@@ -12,3 +12,4 @@ COMMENT ON COLUMN domains.purchase_source IS 'Source of domain purchase: nameche
 COMMENT ON COLUMN domains.namecheap_order_id IS 'Order ID from Namecheap when domain was purchased through API';
 COMMENT ON COLUMN domains.auto_renew IS 'Whether domain has auto-renewal enabled';
 
+

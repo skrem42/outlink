@@ -243,3 +243,4 @@ AFTER INSERT ON analytics_events
 FOR EACH ROW EXECUTE FUNCTION update_click_counts();
 
 
+

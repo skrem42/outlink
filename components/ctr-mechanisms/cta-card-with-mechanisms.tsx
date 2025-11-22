@@ -45,6 +45,16 @@ export function CTACardWithMechanisms({
     onReveal();
   };
 
+  // Define hasOtherMechanisms before using it
+  const hasOtherMechanisms = () => {
+    return (
+      mechanisms?.click_to_reveal?.enabled ||
+      mechanisms?.countdown_timer?.enabled ||
+      mechanisms?.blur_preview?.enabled ||
+      mechanisms?.progress_bar?.enabled
+    );
+  };
+
   // Check if access code is required and not yet verified
   if (mechanisms?.access_code?.enabled && showAccessCodeModal) {
     return (
@@ -64,15 +74,6 @@ export function CTACardWithMechanisms({
       </>
     );
   }
-
-  const hasOtherMechanisms = () => {
-    return (
-      mechanisms?.click_to_reveal?.enabled ||
-      mechanisms?.countdown_timer?.enabled ||
-      mechanisms?.blur_preview?.enabled ||
-      mechanisms?.progress_bar?.enabled
-    );
-  };
 
   // Wrap with appropriate mechanisms
   let content = children;
@@ -155,9 +156,9 @@ export function CTACardWithMechanisms({
     mechanisms?.exclusive_badge?.enabled
   ].filter(Boolean).length > 1;
 
-  // Don't wrap in additional div - let the Card component handle the boundaries
+  // Wrap everything in a relative container to contain overlays and badges
   return (
-    <>
+    <div className="relative overflow-hidden rounded-xl">
       {mechanisms?.limited_slots?.enabled && (
         <ScarcityBadge
           type="slots"
@@ -193,7 +194,7 @@ export function CTACardWithMechanisms({
       )}
       {content}
       <ConfettiEffect trigger={showConfetti} />
-    </>
+    </div>
   );
 
 }

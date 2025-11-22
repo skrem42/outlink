@@ -10,7 +10,6 @@ import { motion } from "framer-motion";
 import { ModernAudioPlayer } from "./modern-audio-player";
 import { CTACardWithMechanisms } from "./ctr-mechanisms/cta-card-with-mechanisms";
 import { AgeConfirmationModal } from "./ctr-mechanisms/age-confirmation-modal";
-import { isAdultPlatform } from "@/lib/utils";
 import type { Link, LandingPageSettings } from "@/types/database";
 
 interface LandingPageViewerProps {
@@ -26,8 +25,7 @@ export function LandingPageViewer({
   onButtonClick,
   isPreview = false,
 }: LandingPageViewerProps) {
-  const [ageConfirmedCards, setAgeConfirmedCards] = useState<Set<string>>(new Set());
-  const [pendingAgeCard, setPendingAgeCard] = useState<string | null>(null);
+  const [showingAgeConfirmationFor, setShowingAgeConfirmationFor] = useState<string | null>(null);
   
   const isLightMode = settings.theme_mode === 'light';
   
@@ -385,8 +383,9 @@ export function LandingPageViewer({
                     }
                     
                     // Check if 18+ confirmation is required
-                    if (card.require_18plus && isAdultPlatform(card.url) && !ageConfirmedCards.has(card.id)) {
-                      setPendingAgeCard(card.id);
+                    if (card.require_18plus) {
+                      // Show age confirmation overlay
+                      setShowingAgeConfirmationFor(card.id);
                       return;
                     }
 
@@ -404,11 +403,31 @@ export function LandingPageViewer({
                     window.location.href = card.url;
                   };
 
+                  const handleAgeConfirm = () => {
+                    // Track analytics
+                    fetch("/api/analytics/track", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        link_id: link.id,
+                        event_type: "click",
+                      }),
+                    }).catch(console.error);
+
+                    // Redirect to destination
+                    window.location.href = card.url;
+                  };
+
+                  const handleAgeCancel = () => {
+                    // Just close the overlay, don't track as confirmed
+                    setShowingAgeConfirmationFor(null);
+                  };
+
                   const renderCardContent = () => (
                     <Card
                       isPressable
                       onPress={handleCardClick}
-                      className="w-full hover:scale-[1.02] transition-transform shadow-lg overflow-hidden relative"
+                      className="w-full hover:scale-[1.02] transition-transform shadow-lg relative"
                       style={getCardStyle()}
                     >
                       <CardBody className="p-6 min-h-[120px] flex items-center justify-center relative">
@@ -501,6 +520,34 @@ export function LandingPageViewer({
                     </Card>
                   );
 
+                  // First render card with CTR mechanisms (these reveal first)
+                  const cardWithMechanisms = card.ctr_mechanisms ? (
+                    <CTACardWithMechanisms
+                      card={card}
+                      onReveal={() => {
+                        // onReveal just reveals the card, doesn't trigger navigation
+                        // The actual click will trigger navigation via renderCardContent's onPress
+                      }}
+                    >
+                      {renderCardContent()}
+                    </CTACardWithMechanisms>
+                  ) : (
+                    renderCardContent()
+                  );
+
+                  // Then wrap with age confirmation if user clicked and needs verification
+                  const finalContent = showingAgeConfirmationFor === card.id && !isPreview ? (
+                    <AgeConfirmationModal
+                      isOpen={true}
+                      onConfirm={handleAgeConfirm}
+                      onCancel={handleAgeCancel}
+                    >
+                      {cardWithMechanisms}
+                    </AgeConfirmationModal>
+                  ) : (
+                    cardWithMechanisms
+                  );
+
                   return (
                     <motion.div
                       key={card.id}
@@ -509,19 +556,7 @@ export function LandingPageViewer({
                       transition={{ delay: 0.6 + index * 0.1, duration: 0.3 }}
                       className="relative"
                     >
-                      {card.ctr_mechanisms ? (
-                        <CTACardWithMechanisms
-                          card={card}
-                          onReveal={() => {
-                            // onReveal just reveals the card, doesn't trigger navigation
-                            // The actual click will trigger navigation via renderCardContent's onPress
-                          }}
-                        >
-                          {renderCardContent()}
-                        </CTACardWithMechanisms>
-                      ) : (
-                        renderCardContent()
-                      )}
+                      {finalContent}
                     </motion.div>
                   );
                 })}
@@ -580,38 +615,6 @@ export function LandingPageViewer({
         </div>
       </div>
       </div>
-      
-      {/* Age Confirmation Modal - Only show in non-preview mode */}
-      {!isPreview && pendingAgeCard && (
-        <AgeConfirmationModal
-          isOpen={true}
-          onConfirm={() => {
-            // Add to confirmed set
-            setAgeConfirmedCards(prev => new Set(prev).add(pendingAgeCard));
-            setPendingAgeCard(null);
-            
-            // Find the card and trigger click
-            const card = settings.cta_cards?.find(c => c.id === pendingAgeCard);
-            if (card) {
-              // Track analytics
-              fetch("/api/analytics/track", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  link_id: link.id,
-                  event_type: "click",
-                }),
-              }).catch(console.error);
-
-              // Redirect to destination
-              window.location.href = card.url;
-            }
-          }}
-          onCancel={() => {
-            setPendingAgeCard(null);
-          }}
-        />
-      )}
     </div>
   );
 }

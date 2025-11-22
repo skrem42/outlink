@@ -113,3 +113,4 @@ Both scripts:
 The `SUPABASE_SERVICE_ROLE_KEY` and `DATABASE_URL` contain sensitive credentials that should never be shared publicly.
 
 
+

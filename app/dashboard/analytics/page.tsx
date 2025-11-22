@@ -749,38 +749,38 @@ function AnalyticsContent() {
 
   return (
     <div className="w-full flex flex-col gap-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Analytics</h1>
-          <p className="text-default-500 mt-1">
+          <h1 className="text-2xl sm:text-3xl font-bold">Analytics</h1>
+          <p className="text-default-500 mt-1 text-sm sm:text-base">
             {selectedLinkData
               ? `Analytics for ${selectedLinkData.domain}/${selectedLinkData.path}`
               : "Track your link performance and audience insights"}
           </p>
         </div>
-        <div className="flex gap-2 items-start flex-wrap">
-          <Select
-            label="Select Link"
-            className="w-64"
-            selectedKeys={[selectedLink]}
-            onChange={(e) => handleLinkChange(e.target.value)}
-            size="sm"
-            startContent={<Icon icon="solar:link-circle-linear" width={18} />}
-            isDisabled={isLoadingLinks}
-          >
-            <SelectItem key="all" value="all">
-              All Links
-            </SelectItem>
-            {links.map((link) => (
-              <SelectItem key={link.id} value={link.id}>
-                {link.domain}/{link.path} ({link.clicks} clicks)
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Select
+              label="Select Link"
+              className="w-full sm:w-64"
+              selectedKeys={[selectedLink]}
+              onChange={(e) => handleLinkChange(e.target.value)}
+              size="sm"
+              startContent={<Icon icon="solar:link-circle-linear" width={18} />}
+              isDisabled={isLoadingLinks}
+            >
+              <SelectItem key="all" value="all">
+                All Links
               </SelectItem>
-            ))}
-          </Select>
-          <div className="flex gap-2">
+              {links.map((link) => (
+                <SelectItem key={link.id} value={link.id}>
+                  {link.domain}/{link.path} ({link.clicks} clicks)
+                </SelectItem>
+              ))}
+            </Select>
             <DateRangePicker
               label="Date Range"
-              className="w-80"
+              className="w-full sm:w-80"
               size="sm"
               value={dateRange}
               onChange={setDateRange}
@@ -811,9 +811,11 @@ function AnalyticsContent() {
                 </div>
               }
             />
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3">
             <Select
               label="Timezone"
-              className="w-72"
+              className="w-full sm:w-72"
               selectedKeys={[timezone]}
               onChange={(e) => setTimezone(e.target.value)}
               size="sm"
@@ -825,14 +827,14 @@ function AnalyticsContent() {
                 </SelectItem>
               ))}
             </Select>
+            <Button
+              color="primary"
+              startContent={<Icon icon="solar:download-linear" width={18} />}
+              className="w-full sm:w-auto"
+            >
+              Export
+            </Button>
           </div>
-          <Button
-            color="primary"
-            startContent={<Icon icon="solar:download-linear" width={18} />}
-            className="mt-[22px]"
-          >
-            Export
-          </Button>
         </div>
       </div>
 

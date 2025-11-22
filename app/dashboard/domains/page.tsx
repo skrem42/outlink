@@ -30,6 +30,7 @@ import {
 import { Tabs, Tab } from "@heroui/tabs";
 import { Select, SelectItem } from "@heroui/select";
 import { Icon } from "@iconify/react";
+import { addToast } from "@heroui/toast";
 
 // Sample data for domains
 const domainsData = [
@@ -234,16 +235,28 @@ export default function DomainsPage() {
       const result = await response.json();
 
       if (result.error) {
-        alert(`Purchase failed: ${result.error}`);
+        addToast({
+          title: "Error",
+          description: `Purchase failed: ${result.error}`,
+          color: "danger",
+        });
       } else {
-        alert(`Success! ${selectedDomain.domain} has been purchased. Order ID: ${result.data?.purchaseDetails?.orderId}`);
+        addToast({
+          title: "Domain Purchased!",
+          description: `${selectedDomain.domain} has been purchased. Order ID: ${result.data?.purchaseDetails?.orderId}`,
+          color: "success",
+        });
         onPurchaseOpenChange();
         setSelectedTab("my-domains");
         // In a real app, you'd refresh the domains list here
       }
     } catch (error) {
       console.error("Purchase error:", error);
-      alert("Failed to purchase domain. Please try again.");
+      addToast({
+        title: "Error",
+        description: "Failed to purchase domain. Please try again.",
+        color: "danger",
+      });
     } finally {
       setIsPurchasing(false);
     }

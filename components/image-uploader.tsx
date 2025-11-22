@@ -7,6 +7,7 @@ import { Icon } from "@iconify/react";
 import { Spinner } from "@heroui/spinner";
 import Image from "next/image";
 import { ImageCropper } from "./image-cropper";
+import { addToast } from "@heroui/toast";
 
 interface ImageUploaderProps {
   value?: string | null;
@@ -45,13 +46,21 @@ export function ImageUploader({
 
     // Validate file type
     if (!file.type.startsWith("image/")) {
-      alert("Please select an image file");
+      addToast({
+        title: "Invalid File Type",
+        description: "Please select an image file",
+        color: "warning",
+      });
       return;
     }
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      alert("File size must be less than 5MB");
+      addToast({
+        title: "File Too Large",
+        description: "File size must be less than 5MB",
+        color: "warning",
+      });
       return;
     }
 
@@ -70,7 +79,11 @@ export function ImageUploader({
       setShowCropper(true);
     } catch (error) {
       console.error("Upload error:", error);
-      alert("Failed to upload image");
+      addToast({
+        title: "Error",
+        description: "Failed to upload image",
+        color: "danger",
+      });
     } finally {
       setUploading(false);
     }

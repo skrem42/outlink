@@ -10,3 +10,4 @@ ADD COLUMN IF NOT EXISTS show_domain_handle BOOLEAN DEFAULT FALSE,
 ADD COLUMN IF NOT EXISTS profile_display_mode TEXT NOT NULL DEFAULT 'full' CHECK (profile_display_mode IN ('full', 'avatar'));
 
 
+

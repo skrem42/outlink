@@ -50,23 +50,23 @@ export function ProgressBarReveal({
   }
 
   return (
-    <div className="relative">
-      <div className="absolute inset-0 backdrop-blur-md bg-black/60 z-[5] flex flex-col items-center justify-center px-6 pt-20 pb-12 rounded-xl">
-        <motion.div className="text-center space-y-4 w-full max-w-md">
+    <div className="relative overflow-hidden rounded-xl">
+      <div className="absolute inset-0 backdrop-blur-md bg-black/60 z-[5] flex flex-col items-center justify-center px-4 py-4 rounded-xl">
+        <motion.div className="text-center space-y-2 w-full max-w-[250px]">
           <Icon
             icon="solar:hourglass-bold-duotone"
-            width={56}
+            width={40}
             className="text-white mx-auto drop-shadow-lg"
           />
-          <div className="space-y-3">
-            <p className="text-white font-semibold text-lg drop-shadow-md">{message}</p>
+          <div className="space-y-2">
+            <p className="text-white font-semibold text-base drop-shadow-md">{message}</p>
             <Progress
               value={progress}
               className="w-full"
               color="primary"
-              size="lg"
+              size="md"
             />
-            <p className="text-white/80 text-sm drop-shadow-sm">
+            <p className="text-white/80 text-xs drop-shadow-sm">
               {Math.round(progress)}% loaded...
             </p>
           </div>

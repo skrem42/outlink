@@ -61,3 +61,4 @@ export function ConfettiEffect({ trigger, duration = 3000 }: ConfettiEffectProps
   );
 }
 
+

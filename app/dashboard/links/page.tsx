@@ -18,8 +18,10 @@ import { Spinner } from "@heroui/spinner";
 import { Icon } from "@iconify/react";
 import { useRouter } from "next/navigation";
 import { NewLinkDrawer } from "@/components/new-link-drawer";
+import { LinkTypeSwitcher } from "@/components/link-type-switcher";
 import { api } from "@/lib/api-client";
 import type { Link } from "@/types/database";
+import { addToast } from "@heroui/toast";
 
 // Default domains
 const defaultDomains = [
@@ -69,11 +71,6 @@ export default function LinksPage() {
     }
   };
 
-  const showToast = (message: string) => {
-    // Simple toast implementation - you can replace with actual toast library
-    alert(message);
-  };
-
   const handleDomainChange = (id: string, domain: string) => {
     setLinksData((prev) =>
       prev.map((link) => (link.id === id ? { ...link, domain } : link))
@@ -110,6 +107,18 @@ export default function LinksPage() {
     });
   };
 
+  const handleLinkTypeChange = (id: string, link_type: "whitehat" | "greyhat" | "blackhat") => {
+    setLinksData((prev) =>
+      prev.map((link) => (link.id === id ? { ...link, link_type } : link))
+    );
+    setEditedLinks((prev) => {
+      const updated = new Map(prev);
+      const existing = updated.get(id) || {};
+      updated.set(id, { ...existing, link_type });
+      return updated;
+    });
+  };
+
   const handleApplyChanges = async () => {
     try {
       // Update all edited links
@@ -118,13 +127,19 @@ export default function LinksPage() {
       );
 
       await Promise.all(updatePromises);
-      showToast(
-        "Changes saved! May take up to 20 minutes for changes to take effect."
-      );
+      addToast({
+        title: "Changes Applied",
+        description: "Changes saved! May take up to 20 minutes for changes to take effect.",
+        color: "primary",
+      });
       setEditedLinks(new Map());
       fetchLinks(); // Refresh the list
     } catch (err) {
-      showToast("Failed to save changes. Please try again.");
+      addToast({
+        title: "Error",
+        description: "Failed to save changes. Please try again.",
+        color: "danger",
+      });
       console.error("Error updating links:", err);
     }
   };
@@ -132,7 +147,11 @@ export default function LinksPage() {
   const handleCopyLink = (domain: string, path: string) => {
     const fullUrl = `https://${domain}/${path}`;
     navigator.clipboard.writeText(fullUrl);
-    showToast("Link copied to clipboard!");
+    addToast({
+      title: "Success",
+      description: "Link copied to clipboard!",
+      color: "success",
+    });
   };
 
   const handleViewAnalytics = (linkId: string) => {
@@ -293,7 +312,8 @@ export default function LinksPage() {
         topContentPlacement="outside"
       >
         <TableHeader>
-          <TableColumn width={250}>DOMAIN</TableColumn>
+          <TableColumn width={150}>TYPE</TableColumn>
+          <TableColumn width={200}>DOMAIN</TableColumn>
           <TableColumn>PATH</TableColumn>
           <TableColumn width={100}>CLICKS</TableColumn>
           <TableColumn width={100}>STATUS</TableColumn>
@@ -303,10 +323,16 @@ export default function LinksPage() {
           {(item) => (
             <TableRow key={item.id}>
               <TableCell>
+                <LinkTypeSwitcher
+                  value={item.link_type}
+                  onChange={(value) => handleLinkTypeChange(item.id, value)}
+                />
+              </TableCell>
+              <TableCell>
                 <Select
                   size="sm"
                   selectedKeys={[item.domain]}
-                  className="min-w-[200px]"
+                  className="min-w-[180px]"
                   onChange={(e) => handleDomainChange(item.id, e.target.value)}
                   aria-label="Select domain"
                   >
@@ -352,7 +378,7 @@ export default function LinksPage() {
               </TableCell>
               <TableCell>
                 <div className="flex items-center gap-2">
-                  {item.link_type === "whitehat" && (
+                  {(item.link_type === "whitehat" || item.link_type === "greyhat") && (
                     <Button
                       isIconOnly
                       size="sm"

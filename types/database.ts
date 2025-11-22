@@ -198,6 +198,21 @@ export interface LandingPageSettings {
   updated_at: string;
 }
 
+export interface GreyhatPageSettings {
+  id: string;
+  link_id: string;
+  warning_title: string;
+  warning_message: string;
+  confirm_button_text: string;
+  background_color: string;
+  card_background_color: string;
+  button_color: string;
+  text_color: string;
+  icon_color: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // API Request types for Landing Page Settings
 export interface CreateLandingPageSettingsRequest {
   link_id: string;
@@ -234,6 +249,17 @@ export interface UpdateLandingPageSettingsRequest {
   voice_note_url?: string;
 }
 
+export interface UpdateGreyhatPageSettingsRequest {
+  warning_title?: string;
+  warning_message?: string;
+  confirm_button_text?: string;
+  background_color?: string;
+  card_background_color?: string;
+  button_color?: string;
+  text_color?: string;
+  icon_color?: string;
+}
+
 export interface CreateLinkRequest {
   link_type: 'whitehat' | 'greyhat' | 'blackhat';
   platform: string;
@@ -248,6 +274,7 @@ export interface CreateLinkRequest {
 }
 
 export interface UpdateLinkRequest {
+  link_type?: 'whitehat' | 'greyhat' | 'blackhat';
   creator_id?: string;
   domain?: string;
   domain_id?: string;
@@ -349,6 +376,7 @@ export interface LinkWithRelations extends Link {
   creator?: Creator;
   domain_data?: Domain;
   landing_page_settings?: LandingPageSettings;
+  greyhat_page_settings?: GreyhatPageSettings;
 }
 
 // Creator with stats

@@ -34,3 +34,4 @@ CREATE TRIGGER landing_page_settings_updated_at
   EXECUTE FUNCTION update_landing_page_settings_updated_at();
 
 
+
