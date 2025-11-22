@@ -100,7 +100,8 @@ export function CTACardWithMechanisms({
     );
   }
 
-  // Apply Progress Bar (outermost time-based reveal)
+  // Apply blocking mechanisms (only one can be active at a time)
+  // Priority: Progress Bar > Countdown Timer > Click to Reveal > Blur Preview
   if (mechanisms?.progress_bar?.enabled && !isRevealed) {
     content = (
       <ProgressBarReveal
@@ -136,7 +137,7 @@ export function CTACardWithMechanisms({
       </ClickToReveal>
     );
   }
-  // Apply Blur Preview
+  // Apply Blur Preview (blocking mechanism)
   else if (mechanisms?.blur_preview?.enabled && !isRevealed) {
     content = (
       <BlurOverlay

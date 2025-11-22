@@ -102,7 +102,7 @@ export function LandingPageViewer({
       
       {/* Mobile-sized container */}
       <div 
-        className="relative z-10 w-full md:max-w-md md:h-[812px] md:shadow-2xl md:rounded-2xl overflow-hidden flex flex-col" 
+        className="relative z-10 w-full md:max-w-md md:min-h-[812px] md:shadow-2xl md:rounded-2xl overflow-y-auto flex flex-col" 
         style={{ backgroundColor: themeColors.background }}
       >
       {/* Full Display Mode - Hero Image */}
@@ -111,7 +111,7 @@ export function LandingPageViewer({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6 }}
-          className="relative w-full h-[350px] md:h-[400px]"
+          className="relative w-full h-[280px] md:h-[320px]"
         >
           {settings.avatar_url ? (
             <>
@@ -120,13 +120,7 @@ export function LandingPageViewer({
                 <img
                   src={settings.avatar_url}
                   alt={settings.display_name || link.title || "Profile"}
-                  className="absolute inset-0 w-full h-full object-cover object-top"
-                  style={{ 
-                    position: 'absolute',
-                    height: '100%',
-                    width: '100%',
-                    inset: '0px',
-                  }}
+                  className="w-full h-full object-cover object-center"
                 />
               </div>
               {/* Gradient overlay to blend into page background */}

@@ -31,13 +31,23 @@ export function BlurOverlay({
 
   return (
     <div className="relative overflow-hidden rounded-xl">
+      {/* Blurred content - completely blocked from interaction */}
       <div
         style={{ filter: `blur(${blurAmount}px)` }}
-        className="pointer-events-none"
+        className="pointer-events-none select-none"
+        aria-hidden="true"
       >
         {children}
       </div>
-      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent z-[5] flex flex-col items-center justify-center px-4 py-3 rounded-xl">
+      {/* Blocking overlay - prevents any clicks from reaching content below */}
+      <div 
+        className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent z-[5] flex flex-col items-center justify-center px-4 py-3 rounded-xl cursor-default"
+        onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+        onPointerUp={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+        onTouchEnd={(e) => e.stopPropagation()}
+      >
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}

@@ -26,6 +26,7 @@ export function ImageUploader({
   const [preview, setPreview] = useState<string | null>(value || null);
   const [showCropper, setShowCropper] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [originalImage, setOriginalImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const aspectClasses = {
@@ -74,7 +75,8 @@ export function ImageUploader({
         fr.readAsDataURL(file);
       });
 
-      // Open cropper modal with the selected image
+      // Store original image and open cropper
+      setOriginalImage(dataUrl);
       setSelectedImage(dataUrl);
       setShowCropper(true);
     } catch (error) {
@@ -146,9 +148,18 @@ export function ImageUploader({
 
   const handleRemove = () => {
     setPreview(null);
+    setOriginalImage(null);
     onChange("");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
+    }
+  };
+
+  const handleRecrop = () => {
+    // Always crop from the original image to preserve quality
+    if (originalImage) {
+      setSelectedImage(originalImage);
+      setShowCropper(true);
     }
   };
 
@@ -172,7 +183,15 @@ export function ImageUploader({
                 <Button
                   size="sm"
                   variant="flat"
-                  fullWidth
+                  onPress={handleRecrop}
+                  isDisabled={!originalImage}
+                  startContent={<Icon icon="solar:crop-bold-duotone" width={18} />}
+                >
+                  Crop
+                </Button>
+                <Button
+                  size="sm"
+                  variant="flat"
                   onPress={() => fileInputRef.current?.click()}
                   startContent={<Icon icon="solar:refresh-linear" width={18} />}
                 >
@@ -182,7 +201,6 @@ export function ImageUploader({
                   size="sm"
                   variant="flat"
                   color="danger"
-                  fullWidth
                   onPress={handleRemove}
                   startContent={<Icon icon="solar:trash-bin-trash-linear" width={18} />}
                 >

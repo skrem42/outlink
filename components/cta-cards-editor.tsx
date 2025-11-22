@@ -563,7 +563,7 @@ export function CTACardsEditor({ value, onChange }: CTACardsEditorProps) {
                               variant="flat"
                               startContent={<Icon icon="solar:shield-bold" width={12} />}
                             >
-                              Blocking Mechanisms
+                              Reveals
                             </Chip>
                             <p className="text-xs text-default-500">Only one can be active at a time</p>
                           </div>
@@ -688,6 +688,135 @@ export function CTACardsEditor({ value, onChange }: CTACardsEditorProps) {
                                       updateEditingCardCTRMechanisms({
                                         countdown_timer: {
                                           ...editingCard.ctr_mechanisms!.countdown_timer!,
+                                          message: e.target.value,
+                                        },
+                                      })
+                                    }
+                                  />
+                                </>
+                              )}
+                            </div>
+                          </AccordionItem>
+
+                          {/* Blur Preview */}
+                          <AccordionItem
+                            key="blur-preview"
+                            title={
+                              <div className="flex items-center gap-2">
+                                <span>Blur Preview</span>
+                                <Tooltip content="Show blurred content with teaser text to create curiosity.">
+                                  <Chip size="sm" color="success" variant="flat">
+                                    {getCVRIncrease('blur_preview')}
+                                  </Chip>
+                                </Tooltip>
+                              </div>
+                            }
+                          >
+                            <div className="space-y-3 pt-2">
+                              <Switch
+                                isSelected={editingCard.ctr_mechanisms?.blur_preview?.enabled || false}
+                                onValueChange={(checked) => {
+                                  if (checked) {
+                                    enableBlockingMechanism('blur_preview', {
+                                      blur_amount: editingCard.ctr_mechanisms?.blur_preview?.blur_amount || 5,
+                                      teaser_text: editingCard.ctr_mechanisms?.blur_preview?.teaser_text || "Click to see exclusive content",
+                                    });
+                                  } else {
+                                    disableBlockingMechanism('blur_preview');
+                                  }
+                                }}
+                              >
+                                Enable Blur Preview
+                              </Switch>
+                              {editingCard.ctr_mechanisms?.blur_preview?.enabled && (
+                                <>
+                                  <Input
+                                    type="number"
+                                    label="Blur Amount (1-10)"
+                                    value={String(editingCard.ctr_mechanisms.blur_preview.blur_amount)}
+                                    onChange={(e) =>
+                                      updateEditingCardCTRMechanisms({
+                                        blur_preview: {
+                                          ...editingCard.ctr_mechanisms!.blur_preview!,
+                                          blur_amount: parseInt(e.target.value) || 5,
+                                        },
+                                      })
+                                    }
+                                    min={1}
+                                    max={10}
+                                  />
+                                  <Input
+                                    label="Teaser Text"
+                                    value={editingCard.ctr_mechanisms.blur_preview.teaser_text}
+                                    onChange={(e) =>
+                                      updateEditingCardCTRMechanisms({
+                                        blur_preview: {
+                                          ...editingCard.ctr_mechanisms!.blur_preview!,
+                                          teaser_text: e.target.value,
+                                        },
+                                      })
+                                    }
+                                    placeholder="Click to see exclusive content"
+                                  />
+                                </>
+                              )}
+                            </div>
+                          </AccordionItem>
+
+                          {/* Progress Bar */}
+                          <AccordionItem
+                            key="progress-bar"
+                            title={
+                              <div className="flex items-center gap-2">
+                                <span>Progress Bar Reveal</span>
+                                <Tooltip content="Show loading bar that reveals link after completion.">
+                                  <Chip size="sm" color="success" variant="flat">
+                                    {getCVRIncrease('progress_bar')}
+                                  </Chip>
+                                </Tooltip>
+                              </div>
+                            }
+                          >
+                            <div className="space-y-3 pt-2">
+                              <Switch
+                                isSelected={editingCard.ctr_mechanisms?.progress_bar?.enabled || false}
+                                onValueChange={(checked) => {
+                                  if (checked) {
+                                    enableBlockingMechanism('progress_bar', {
+                                      duration_seconds: editingCard.ctr_mechanisms?.progress_bar?.duration_seconds || 3,
+                                      message: editingCard.ctr_mechanisms?.progress_bar?.message || "Loading your exclusive content...",
+                                    });
+                                  } else {
+                                    disableBlockingMechanism('progress_bar');
+                                  }
+                                }}
+                              >
+                                Enable Progress Bar
+                              </Switch>
+                              {editingCard.ctr_mechanisms?.progress_bar?.enabled && (
+                                <>
+                                  <Input
+                                    type="number"
+                                    label="Duration (seconds)"
+                                    value={String(editingCard.ctr_mechanisms.progress_bar.duration_seconds)}
+                                    onChange={(e) =>
+                                      updateEditingCardCTRMechanisms({
+                                        progress_bar: {
+                                          ...editingCard.ctr_mechanisms!.progress_bar!,
+                                          duration_seconds: parseInt(e.target.value) || 3,
+                                        },
+                                      })
+                                    }
+                                    min={1}
+                                    max={30}
+                                  />
+                                  <Input
+                                    label="Message"
+                                    value={editingCard.ctr_mechanisms.progress_bar.message}
+                                    onChange={(e) =>
+                                      updateEditingCardCTRMechanisms({
+                                        progress_bar: {
+                                          ...editingCard.ctr_mechanisms!.progress_bar!,
                                           message: e.target.value,
                                         },
                                       })
@@ -944,134 +1073,6 @@ export function CTACardsEditor({ value, onChange }: CTACardsEditorProps) {
                                       })
                                     }
                                     placeholder="Check your email"
-                                  />
-                                </>
-                              )}
-                            </div>
-                          </AccordionItem>
-
-                          {/* Blur Preview */}
-                          <AccordionItem
-                            key="blur-preview"
-                            title={
-                              <div className="flex items-center gap-2">
-                                <span>Blur Preview</span>
-                                <Tooltip content="Show blurred content with teaser text to create curiosity.">
-                                  <Chip size="sm" color="success" variant="flat">
-                                    {getCVRIncrease('blur_preview')}
-                                  </Chip>
-                                </Tooltip>
-                              </div>
-                            }
-                          >
-                            <div className="space-y-3 pt-2">
-                              <Switch
-                                isSelected={editingCard.ctr_mechanisms?.blur_preview?.enabled || false}
-                                onValueChange={(checked) => {
-                                  if (checked) {
-                                    enableBlockingMechanism('blur_preview', {
-                                      blur_amount: editingCard.ctr_mechanisms?.blur_preview?.blur_amount || 5,
-                                      teaser_text: editingCard.ctr_mechanisms?.blur_preview?.teaser_text || "Click to see exclusive content",
-                                    });
-                                  } else {
-                                    disableBlockingMechanism('blur_preview');
-                                  }
-                                }}
-                              >
-                                Enable Blur Preview
-                              </Switch>
-                              {editingCard.ctr_mechanisms?.blur_preview?.enabled && (
-                                <>
-                                  <Input
-                                    type="number"
-                                    label="Blur Amount (1-10)"
-                                    value={String(editingCard.ctr_mechanisms.blur_preview.blur_amount)}
-                                    onChange={(e) =>
-                                      updateEditingCardCTRMechanisms({
-                                        blur_preview: {
-                                          ...editingCard.ctr_mechanisms!.blur_preview!,
-                                          blur_amount: parseInt(e.target.value) || 5,
-                                        },
-                                      })
-                                    }
-                                    min={1}
-                                    max={10}
-                                  />
-                                  <Input
-                                    label="Teaser Text"
-                                    value={editingCard.ctr_mechanisms.blur_preview.teaser_text}
-                                    onChange={(e) =>
-                                      updateEditingCardCTRMechanisms({
-                                        blur_preview: {
-                                          ...editingCard.ctr_mechanisms!.blur_preview!,
-                                          teaser_text: e.target.value,
-                                        },
-                                      })
-                                    }
-                                  />
-                                </>
-                              )}
-                            </div>
-                          </AccordionItem>
-
-                          {/* Progress Bar */}
-                          <AccordionItem
-                            key="progress-bar"
-                            title={
-                              <div className="flex items-center gap-2">
-                                <span>Progress Bar Reveal</span>
-                                <Tooltip content="Show loading bar that reveals link after completion.">
-                                  <Chip size="sm" color="success" variant="flat">
-                                    {getCVRIncrease('progress_bar')}
-                                  </Chip>
-                                </Tooltip>
-                              </div>
-                            }
-                          >
-                            <div className="space-y-3 pt-2">
-                              <Switch
-                                isSelected={editingCard.ctr_mechanisms?.progress_bar?.enabled || false}
-                                onValueChange={(checked) => {
-                                  if (checked) {
-                                    enableBlockingMechanism('progress_bar', {
-                                      duration_seconds: editingCard.ctr_mechanisms?.progress_bar?.duration_seconds || 3,
-                                      message: editingCard.ctr_mechanisms?.progress_bar?.message || "Loading your exclusive content...",
-                                    });
-                                  } else {
-                                    disableBlockingMechanism('progress_bar');
-                                  }
-                                }}
-                              >
-                                Enable Progress Bar
-                              </Switch>
-                              {editingCard.ctr_mechanisms?.progress_bar?.enabled && (
-                                <>
-                                  <Input
-                                    type="number"
-                                    label="Duration (seconds)"
-                                    value={String(editingCard.ctr_mechanisms.progress_bar.duration_seconds)}
-                                    onChange={(e) =>
-                                      updateEditingCardCTRMechanisms({
-                                        progress_bar: {
-                                          ...editingCard.ctr_mechanisms!.progress_bar!,
-                                          duration_seconds: parseInt(e.target.value) || 3,
-                                        },
-                                      })
-                                    }
-                                    min={1}
-                                    max={30}
-                                  />
-                                  <Input
-                                    label="Message"
-                                    value={editingCard.ctr_mechanisms.progress_bar.message}
-                                    onChange={(e) =>
-                                      updateEditingCardCTRMechanisms({
-                                        progress_bar: {
-                                          ...editingCard.ctr_mechanisms!.progress_bar!,
-                                          message: e.target.value,
-                                        },
-                                      })
-                                    }
                                   />
                                 </>
                               )}

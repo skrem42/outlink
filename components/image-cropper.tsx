@@ -4,7 +4,6 @@ import React, { useState, useCallback } from "react";
 import Cropper from "react-easy-crop";
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@heroui/modal";
 import { Button } from "@heroui/button";
-import { Select, SelectItem } from "@heroui/select";
 import { Icon } from "@iconify/react";
 import { addToast } from "@heroui/toast";
 
@@ -23,14 +22,6 @@ interface CropArea {
   height: number;
 }
 
-const ASPECT_RATIOS = [
-  { label: "Square (1:1)", value: 1 },
-  { label: "Wide (16:9)", value: 16 / 9 },
-  { label: "4:3", value: 4 / 3 },
-  { label: "Tall (3:4)", value: 3 / 4 },
-  { label: "Free", value: 0 },
-];
-
 export function ImageCropper({
   isOpen,
   onClose,
@@ -40,7 +31,6 @@ export function ImageCropper({
 }: ImageCropperProps) {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
-  const [aspectRatio, setAspectRatio] = useState(initialAspectRatio);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<CropArea | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -128,10 +118,6 @@ export function ImageCropper({
     }
   };
 
-  const handleAspectRatioChange = (value: string) => {
-    const ratio = parseFloat(value);
-    setAspectRatio(ratio || undefined);
-  };
 
   return (
     <Modal
@@ -160,7 +146,7 @@ export function ImageCropper({
                     image={imageSrc}
                     crop={crop}
                     zoom={zoom}
-                    aspect={aspectRatio || undefined}
+                    aspect={initialAspectRatio}
                     onCropChange={onCropChange}
                     onZoomChange={onZoomChange}
                     onCropComplete={onCropAreaChange}
@@ -185,28 +171,6 @@ export function ImageCropper({
                       onChange={(e) => onZoomChange(parseFloat(e.target.value))}
                       className="w-full h-2 bg-default-200 rounded-lg appearance-none cursor-pointer accent-primary"
                     />
-                  </div>
-
-                  {/* Aspect Ratio Selector */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium flex items-center gap-2">
-                      <Icon icon="solar:size-bold-duotone" width={18} />
-                      Aspect Ratio
-                    </label>
-                    <Select
-                      size="sm"
-                      selectedKeys={[String(aspectRatio)]}
-                      onChange={(e) => handleAspectRatioChange(e.target.value)}
-                      classNames={{
-                        trigger: "h-10",
-                      }}
-                    >
-                      {ASPECT_RATIOS.map((ratio) => (
-                        <SelectItem key={String(ratio.value)} value={String(ratio.value)}>
-                          {ratio.label}
-                        </SelectItem>
-                      ))}
-                    </Select>
                   </div>
                 </div>
 
